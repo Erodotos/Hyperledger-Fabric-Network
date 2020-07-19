@@ -12,7 +12,7 @@ NOTE : The following instractions have been tested on an Ubuntu 18.04.4 LTS Virt
 
 ### Prerequisites
 
-We will need the followin to be installed in order to make Hyperledger Fabric work : 
+The following have to be installed in order to make Hyperledger Fabric work : 
 
 * [Git](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-git)
 * [cURL](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-curl)
@@ -26,7 +26,7 @@ We will need the followin to be installed in order to make Hyperledger Fabric wo
 
 #### Install Git
 
-Usually Git is already installed on Ubuntu. If not you can use the following commands to install it 
+Usually Git is already installed on Ubuntu. If not, you can use the following commands to install it. 
 
 ```
 $ sudo apt update
@@ -35,7 +35,7 @@ $ sudo apt install git
 
 #### Install cURL
 
-Usually cURL is already installed on Ubuntu. If not you can use the following commands to install it 
+Usually cURL is already installed on Ubuntu. If not, you can use the following commands to install it.
 
 ```
 $ sudo apt update
