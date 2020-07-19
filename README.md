@@ -13,14 +13,15 @@ NOTE : The following instractions have been tested on an Ubuntu 18.04.4 LTS Virt
 
 We will need the followin to be installed in order to make Hyperledger Fabric work : 
 
-*Git
-*cURL
-*Docker
-*Docker Compose
-*Go
-*Node.js 
-*NPM
-*Python 2.7
+* Git
+* cURL
+* Docker
+* Docker Compose
+* Go
+* Node.js 
+* NPM
+* Python 2.7
+* Hyperledger Fabric Binaries and Docker Images
 
 ```
 Give examples
