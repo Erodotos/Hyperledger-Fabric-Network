@@ -2,7 +2,7 @@
 
 In this repository you can find instructions on how to build a simple Hyperledger Fabric Network. This is a sample network with 2 Organizations. Each Organization is consist of 2 peers. The following image illustrates the network formation. 
 
-[!(https://i.imgur.com/KMkNXMw.png)]
+[![Demo Video](https://i.imgur.com/KMkNXMw.png)]
 
 ## Getting Started
 
