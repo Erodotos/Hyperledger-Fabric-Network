@@ -29,7 +29,6 @@ The following have to be installed in order to make Hyperledger Fabric work :
 Usually Git is already installed on Ubuntu. If not, you can use the following commands to install it. 
 
 ```
-$ sudo apt update
 $ sudo apt install git
 ```
 
@@ -38,14 +37,12 @@ $ sudo apt install git
 Usually cURL is already installed on Ubuntu. If not, you can use the following commands to install it.
 
 ```
-$ sudo apt update
 $ sudo apt install curl
 ```
 
 #### Install Docker
 
 ```
-$ sudo apt update
 $ sudo apt install docker.io
 ```
 
@@ -62,6 +59,19 @@ $ sudo systemctl enable docker
 ```
 
 #### Install Docker Compose
+
+Run this command to download the current stable release of Docker Compose.
+
+```
+$ sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+$ 
+```
+
+Apply executable permissions to the binary.
+
+```
+sudo chmod +x /usr/local/bin/docker-compose
+```
 
 #### Install Go
 
