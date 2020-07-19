@@ -1,6 +1,6 @@
 # Hyperledger Fabric Test Network
 
-In this repository you can find instructions on how to deploy a simple Hyperledger Fabric Network. This is a sample network that consists of 2 Organizations. Each Organization runs under the hood 2 peers.
+In this repository you can find instructions on how to build a simple Hyperledger Fabric Network. This is a sample network with 2 Organizations. Each Organization is consist of 2 peers. The following image illustrates the network formation. 
 
 ## Getting Started
 
