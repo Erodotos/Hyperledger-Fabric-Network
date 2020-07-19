@@ -26,9 +26,40 @@ We will need the followin to be installed in order to make Hyperledger Fabric wo
 
 #### Install Git
 
+Usually Git is already installed on Ubuntu. If not you can use the following commands to install it 
+
+```
+$ sudo apt update
+$ sudo apt install git
+```
+
 #### Install cURL
 
+Usually cURL is already installed on Ubuntu. If not you can use the following commands to install it 
+
+```
+$ sudo apt update
+$ sudo apt install curl
+```
+
 #### Install Docker
+
+```
+$ sudo apt update
+$ sudo apt install docker.io
+```
+
+Make sure the docker daemon is running.
+
+```
+$ sudo systemctl start docker
+```
+
+Optional: If you want the docker daemon to start when the system starts, use the following:
+
+```
+$ sudo systemctl enable docker
+```
 
 #### Install Docker Compose
 
