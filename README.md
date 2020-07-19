@@ -6,11 +6,21 @@ In this repository you can find instructions on how to build a simple Hyperledge
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+NOTE : The following instractions have been tested on an Ubuntu 18.04.4 LTS Virtual Machine with 4 cores, 8GB RAM and 80GB secondary storage. 
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
+We will need the followin to be installed in order to make Hyperledger Fabric work : 
+
+*Git
+*cURL
+*Docker
+*Docker Compose
+*Go
+*Node.js 
+*NPM
+*Python 2.7
 
 ```
 Give examples
