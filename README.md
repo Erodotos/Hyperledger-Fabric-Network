@@ -16,6 +16,7 @@ The following have to be installed in order to make Hyperledger Fabric work :
 
 * [Git](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-git)
 * [cURL](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-curl)
+* [wget](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-wget)
 * [Docker](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-docker)
 * [Docker Compose](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-compose)
 * [Go](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-go)
@@ -38,6 +39,13 @@ Usually cURL is already installed on Ubuntu. If not, you can use the following c
 
 ```
 $ sudo apt install curl
+```
+#### Install wget
+
+Usually wget is already installed on Ubuntu. If not, you can use the following commands to install it.
+
+```
+$ sudo apt install wget
 ```
 
 #### Install Docker
@@ -64,7 +72,6 @@ Run this command to download the current stable release of Docker Compose.
 
 ```
 $ sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-$ 
 ```
 
 Apply executable permissions to the binary.
@@ -74,6 +81,25 @@ sudo chmod +x /usr/local/bin/docker-compose
 ```
 
 #### Install Go
+
+Download the Go language binary archive file using following link.(In this guide we use go version 1.13.8
+
+```
+$ wget https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
+$ sudo tar -xvf go1.13.8.linux-amd64.tar.gz
+$ sudo mv go /usr/local
+
+```
+
+Now you need to setup Go language environment variables for your project. Commonly you need to set 3 environment variables as GOROOT, GOPATH and PATH. **GOROOT** is the location where Go package is installed on your system. **GOPATH** is the location of your work directory. **PATH** variable is used to access go binary system wide.
+
+```
+$ export GOROOT=/usr/local/go
+$ export GOPATH=$HOME/go
+$ export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+```
+
+All the above environment will be set for your current session only. **To make it permanent add above commands in ~/.profile (~/.bashrc) file.**
 
 #### Install Node.js
 
