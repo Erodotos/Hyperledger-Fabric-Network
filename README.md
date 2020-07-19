@@ -111,7 +111,21 @@ $ nvm install 8.9.4
 
 #### Install NPM
 
+Installing Node.js will also install NPM, however it is recommended that you confirm the version of NPM installed. You can upgrade the npm tool with the following command:
+
+```
+npm install npm@5.6.0 -g
+```
+
 #### Install Python 2.7
+
+The following applies to Ubuntu 16.04 users only.
+
+By default Ubuntu 16.04 comes with Python 3.5.1 installed as the python3 binary. The Fabric Node.js SDK requires an iteration of Python 2.7 in order for npm install operations to complete successfully. Retrieve the 2.7 version with the following command:
+
+```
+sudo apt-get install python
+```
 
 #### Install Hyperledger Fabric Binaries and Docker Images
 ```
