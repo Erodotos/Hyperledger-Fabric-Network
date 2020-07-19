@@ -114,7 +114,7 @@ $ nvm install 8.9.4
 Installing Node.js will also install NPM, however it is recommended that you confirm the version of NPM installed. You can upgrade the npm tool with the following command:
 
 ```
-npm install npm@5.6.0 -g
+$ npm install npm@5.6.0 -g
 ```
 
 #### Install Python 2.7
@@ -128,54 +128,33 @@ sudo apt-get install python
 ```
 
 #### Install Hyperledger Fabric Binaries and Docker Images
-```
-Give examples
-```
 
-### Installing
-
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
+Hyperledger Fabric team, provide a script that will download and install samples and binaries to your system.
 
 ```
-Give the example
+$ curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.0.1 1.4.6 0.4.18
 ```
 
-And repeat
+The command above downloads and executes a bash script that will download and extract all of the platform-specific binaries you will need to set up your network and place them into the cloned repo you created above. It retrieves the following platform-specific binaries:
+
+> configtxgen
+> configtxlator
+> cryptogen
+> discover
+> idemixgen
+> orderer
+> peer
+> fabric-ca-client
+> fabric-ca-server
+
+and places them in the bin sub-directory of the current working directory.
+
+You may want to add that to your PATH environment variable so that these can be picked up without fully qualifying the path to each binary. e.g.:
 
 ```
-until finished
+$ export PATH=<path to download location>/bin:$PATH
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+Finally, the script will download the Hyperledger Fabric docker images from Docker Hub into your local Docker registry and tag them as ‘latest’.
 
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+## Repository Usage
