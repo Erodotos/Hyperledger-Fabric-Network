@@ -98,9 +98,11 @@ $ export GOPATH=$HOME/go
 $ export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 ```
 
-All the above environment will be set for your current session only. **To make it permanent** add the above commands in ~/.profile (~/.bashrc) file.
+All the above environment will be set for your current session only. **To make it permanent** add the above commands in \~/.profile (\~/.bashrc) file.
 
 #### Install Node.js
+
+
 
 #### Install NPM
 
