@@ -1,6 +1,6 @@
-# Project Title
+# Hyperledger Fabric Test Network
 
-One Paragraph of project description goes here
+In this repository you can find instructions on how to deploy a simple Hyperledger Fabric Network. This is a sample network that consists of 2 Organizations. Each Organization runs under the hood 2 peers.
 
 ## Getting Started
 
