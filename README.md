@@ -14,7 +14,7 @@ NOTE : The following instractions have been tested on an Ubuntu 18.04.4 LTS Virt
 
 We will need the followin to be installed in order to make Hyperledger Fabric work : 
 
-* [Git] (https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-git)
+* [Git](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-git)
 * [cURL]
 * [Docker]
 * [Docker Compose]
