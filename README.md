@@ -88,10 +88,9 @@ Download the Go language binary archive file using following link.(In this guide
 $ wget https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
 $ sudo tar -xvf go1.13.8.linux-amd64.tar.gz
 $ sudo mv go /usr/local
-
 ```
 
-Now you need to setup Go language environment variables for your project. Commonly you need to set 3 environment variables as GOROOT, GOPATH and PATH. **GOROOT** is the location where Go package is installed on your system. **GOPATH** is the location of your work directory. **PATH** variable is used to access go binary system wide.
+Now you need to setup Go language environment variables. Commonly you need to set 3 environment variables as GOROOT, GOPATH and PATH. **GOROOT** is the location where Go package is installed on your system. **GOPATH** is the location of your work directory. **PATH** variable is used to access go binary system wide.
 
 ```
 $ export GOROOT=/usr/local/go
@@ -99,7 +98,7 @@ $ export GOPATH=$HOME/go
 $ export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 ```
 
-All the above environment will be set for your current session only. **To make it permanent add above commands in ~/.profile (~/.bashrc) file.**
+All the above environment will be set for your current session only. **To make it permanent** add the above commands in ~/.profile (~/.bashrc) file.
 
 #### Install Node.js
 
