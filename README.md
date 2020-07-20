@@ -167,4 +167,7 @@ $ export PATH=<path to download location>/bin:$PATH
 
 Finally, the script will download the Hyperledger Fabric docker images from Docker Hub into your local Docker registry and tag them as ‘latest’.
 
+All the above environment will be set for your current session only. To make it permanent add the above commands in ~/.profile (~/.bashrc) file.
+
 ## Repository Usage
+
