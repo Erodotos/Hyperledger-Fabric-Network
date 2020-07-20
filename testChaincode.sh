@@ -116,4 +116,4 @@ readInfluxContract(){
 # chaincodeQuery
 
 # ConnectToInflux
-readInfluxContract
+# readInfluxContract

@@ -57,8 +57,8 @@ vendorGoDependencies(){
 CHANNEL_NAME="mychannel"
 CC_RUNTIME_LANGUAGE="golang"
 VERSION="1"
-CC_SRC_PATH="chaincode/src/documents"
-CC_NAME="documents_chaincode"
+CC_SRC_PATH="chaincode/src/influxdb"
+CC_NAME="influxdb_chaincode"
 
 packageChaincode(){
     rm -rf ${CC_NAME}.tar.gz
