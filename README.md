@@ -178,7 +178,20 @@ You can edit and change the contract.go file if you want to get your hands dirty
 
 ### Tutorial
 
-1. sdfs 
-2. sdfsd
-3. sdf
-4. sdf
+Bring up the network and test chaincode:
+
+```
+1. generateNetworkArtifacts.sh 
+2. networkUp.sh
+3. channelUp.sh
+4. deployChaincode.sh
+5. testChaincode.sh
+```
+
+Bring down network and clean directory
+
+```
+1. networkDown.sh
+2. cleanDocker.sh
+3. cleanFolder.sh
+```
