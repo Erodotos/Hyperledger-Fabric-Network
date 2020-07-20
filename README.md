@@ -164,10 +164,9 @@ You may want to add that to your PATH environment variable so that these can be 
 ```
 $ export PATH=<path to download location>/bin:$PATH
 ```
+The above environment will be set for your current session only. **To make it permanent** add the above commands in \~/.profile (\~/.bashrc) file.
 
 Finally, the script will download the Hyperledger Fabric docker images from Docker Hub into your local Docker registry and tag them as ‘latest’.
-
-The above environment will be set for your current session only. **To make it permanent** add the above commands in \~/.profile (\~/.bashrc) file.
 
 ## Repository Usage
 
