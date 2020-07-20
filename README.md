@@ -170,3 +170,15 @@ Finally, the script will download the Hyperledger Fabric docker images from Dock
 
 ## Repository Usage
 
+First of all download this repository into your working directory. 
+
+The following steps will help you to create a Hyperledger Fabric Network, as shown in the beginin of this guide. Also, a test chaincode will be deployed on the network. This chaincode concerns the integration of influxdb to the Fabric network. Further explanation and guides will be added latter.
+
+You can edit and change the contract.go file if you want to get your hands dirty with chaincode. In case you want to experiment on the network creation files you can take a look on the .sh files. Further guidance and documentation on the scripts will be added latter.
+
+### Tutorial
+
+1. sdfs 
+2. sdfsd
+3. sdf
+4. sdf
