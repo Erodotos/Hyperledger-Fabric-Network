@@ -7,9 +7,9 @@ In this repository you can find instructions on how to build a simple Hyperledge
 # Table of Contents
 
 1. [Getting Started](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#getting-started)
-  * [Prerequisites]
+ * [Prerequisites](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#prerequisites)
 2. [Repository Usage](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#repository-usage)
-  * [Tutorial](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#tutorial)
+ * [Tutorial](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#tutorial)
 
 ## Getting Started
 
