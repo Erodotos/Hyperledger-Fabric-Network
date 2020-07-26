@@ -4,6 +4,13 @@ In this repository you can find instructions on how to build a simple Hyperledge
 
 ![Test Network](https://imgur.com/XfyRKTd.png)
 
+# Table of Contents
+
+1. [Getting Started](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#getting-started)
+  * [Prerequisites]
+2. [Repository Usage](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#repository-usage)
+  * [Tutorial](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#tutorial)
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
