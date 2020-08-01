@@ -111,6 +111,8 @@ All the above environment will be set for your current session only. **To make i
 
 This guide use Node.js version 8.9.4. For this reason we are going to install the specific version using NVM (Node Version Manager)
 
+Close and reopen your terminal to start using nvm.
+
 ```
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
 $ nvm install 8.9.4
