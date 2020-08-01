@@ -7,7 +7,7 @@ export PEER0_ORG2_CA=${PWD}/certificates/peerOrganizations/org2.example.com/peer
 export FABRIC_CFG_PATH=${PWD}/configurations
 
 CHANNEL_NAME=mychannel
-CC_NAME="influx2_chaincode"
+CC_NAME="influxdb_chaincode"
 
 setGlobalsForOrderer(){
     export CORE_PEER_LOCALMSPID="OrdererMSP"
@@ -116,4 +116,4 @@ readInfluxContract(){
 # chaincodeQuery
 
 # ConnectToInflux
-# readInfluxContract
+readInfluxContract
