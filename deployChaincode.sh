@@ -48,7 +48,7 @@ setGlobalsForPeer1Org2(){
 
 vendorGoDependencies(){
     echo "Vendoring Go dependencies ..."
-    pushd ./chaincode/src/documents
+    pushd ./chaincode/src/influxdb
     GO111MODULE=on go mod vendor
     popd
     echo Finished vendoring Go dependencies
