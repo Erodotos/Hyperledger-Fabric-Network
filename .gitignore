@@ -1,3 +1,4 @@
+*.DS_Store
 certificates/
 chaincode/src/influxdb/vendor/*
 Org1MSPanchors.tx
