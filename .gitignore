@@ -1,8 +1,9 @@
 certificates/
-chaincode/src/influxdb/vendor/
+chaincode/src/influxdb/vendor/*
 Org1MSPanchors.tx
 Org2MSPanchors.tx
 influxdb_chaincode.tar.gz
 log.txt
 mychannel.tx
 system-genesis-block/genesis.block
+channel-artifacts/mychannel.block
