@@ -84,7 +84,7 @@ $ sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docke
 Apply executable permissions to the binary.
 
 ```
-sudo chmod +x /usr/local/bin/docker-compose
+$ sudo chmod +x /usr/local/bin/docker-compose
 ```
 
 #### Install Go
