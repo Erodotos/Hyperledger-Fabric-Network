@@ -24,7 +24,6 @@ type InfluxDB struct {
 	client         influxdb2.Client
 	writeAPI       api.WriteApi
 	queryAPI       api.QueryApi
-	writeInBatches bool
 }
 
 //The struct into which the received points are unmarshalled (i.e. json -> golang struct)
@@ -76,7 +75,6 @@ func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterfa
 	_ = infdb.initConnection("http://influxdb_demo:8086", "mydb", "", "", 2)
 
 	var pts PointsJson
-	//pts = dataJson
 	err := json.Unmarshal([]byte(dataJson), &pts)
 	if err != nil {
 		return err
@@ -99,13 +97,13 @@ func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterfa
 			panic(err)
 		}
 
-		_ = time.Unix(tm, 0) //not sure why we need this
+		point_time := time.Unix(tm, 0)
 
 		p := influxdb2.NewPoint(
 			point.Measurement,
 			tags_map,
 			fields_map,
-			time.Now())
+			point_time)
 
 		// write asynchronously
 		infdb.writeAPI.WritePoint(p)
