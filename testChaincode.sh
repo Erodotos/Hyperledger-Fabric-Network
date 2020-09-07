@@ -6,8 +6,6 @@ export PEER0_ORG1_CA=${PWD}/certificates/peerOrganizations/org1.example.com/peer
 export PEER0_ORG2_CA=${PWD}/certificates/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
 export FABRIC_CFG_PATH=${PWD}/configurations
 
-CHANNEL_NAME=mychannel
-CC_NAME="influxdb_chaincode"
 
 setGlobalsForOrderer(){
     export CORE_PEER_LOCALMSPID="OrdererMSP"
@@ -47,73 +45,90 @@ setGlobalsForPeer1Org2(){
     
 }
 
-createDocument(){
+createDevice(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --isInit \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "CreateDevice","Args":["Dev1", "Warehouse A"]}'
+
+}
+
+queryDevice(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+
+    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["QueryDevice", "Dev1"]}'
+}
+
+updateDeviceLocation(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "UpdateLocation","Args":["Dev1", "Warehouse C"]}'
+}
+
+writeInfluxContract(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
     setGlobalsForPeer0Org1
     
     peer chaincode invoke -o localhost:7050 \
-    --ordererTLSHostnameOverride orderer.example.com \
-    --tls $CORE_PEER_TLS_ENABLED \
-    --cafile $ORDERER_CA \
-    -C $CHANNEL_NAME \
-    -n ${CC_NAME}  \
-    --isInit \
-    --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
-    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "NewDocument","Args":["D1", "Erodotos Demetriou", "50", "Warehouse B"]}'
-    
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "WriteToInflux","Args":["{\"points\":[{\"measurement\" : \"stat4\", \"tags\" : [{ \"key\" : \"p1t1\", \"value\" : \"a\"}, { \"key\" : \"p1t2\", \"value\" : \"b\" }],\"fields\" : [{\"key\" : \"p1f1\",\"value\":\"c\"}],\"timestamp\":\"1136239445\"},{\"measurement\":\"stat4\",\"tags\":[{\"key\":\"p2t1\",\"value\":\"a\"},{\"key\":\"p2t2\",\"value\":\"b\"}],\"fields\":[{\"key\":\"p2f1\",\"value\":\"c\"}],\"timestamp\":\"1136239446\"}]}"]}'
+
+   
 }
 
-chaincodeQuery(){
-    setGlobalsForPeer0Org1
-    
-    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["QueryDocument", "D1"]}'
-}
-
-updateDocumentLocation(){
-    setGlobalsForPeer0Org1
-    
-    peer chaincode invoke -o localhost:7050 \
-    --ordererTLSHostnameOverride orderer.example.com \
-    --tls $CORE_PEER_TLS_ENABLED \
-    --cafile $ORDERER_CA \
-    -C $CHANNEL_NAME \
-    -n ${CC_NAME}  \
-    --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
-    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "UpdateLocation","Args":["D2", "Warehouse B"]}'
-}
-
-ConnectToInflux(){
-    setGlobalsForPeer0Org1
-    
-    peer chaincode invoke -o localhost:7050 \
-    --ordererTLSHostnameOverride orderer.example.com \
-    --tls $CORE_PEER_TLS_ENABLED \
-    --cafile $ORDERER_CA \
-    -C $CHANNEL_NAME \
-    -n ${CC_NAME}  \
-    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "ConnectToInflux","Args":["test"]}'
-}
 
 readInfluxContract(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
     setGlobalsForPeer0Org1
     
     peer chaincode invoke -o localhost:7050 \
-    --ordererTLSHostnameOverride orderer.example.com \
-    --tls $CORE_PEER_TLS_ENABLED \
-    --cafile $ORDERER_CA \
-    -C $CHANNEL_NAME \
-    -n ${CC_NAME}  \
-    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "ReadFromInflux","Args":["stat"]}'
-    # --isInit 
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "ReadFromInflux","Args":["mydb", "autogen", "-2h", "-1m", "stat4"]}'
+        
+        #db, rp, start, stop, measurement 
+
 }
 
-# createDocument
-# chaincodeQuery
-# updateDocumentLocation
-# chaincodeQuery
 
-# ConnectToInflux
-readInfluxContract
+#Contract-API: Influx Chaincode
+# createDevice
+# queryDevice
+# updateDeviceLocation
+# writeInfluxContract   #CANNOT be used as --isInit
+ readInfluxContract    #CANNOT be used as --isInit
+
+##{"points":[{"measurement" : "stat4", "tags" : [{ "key" : "p1t1", "value" : "a"}, { "key" : "p1t2", "value" : "b" }],"fields" : [{"key" : "p1f1","value":"c"}],"timestamp":"1136239445"},{"measurement":"stat4","tags":[{"key":"p2t1","value":"a"},{"key":"p2t2","value":"b"}],"fields":[{"key":"p2f1","value":"c"}],"timestamp":"1136239446"}]}
