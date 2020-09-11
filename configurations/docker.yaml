@@ -296,7 +296,7 @@ services:
     container_name: influxdb_demo
     image: influxdb:latest
     ports:
-      - '8087:8086'
+      - '8086:8086'
     volumes:
       - influxdb-storage:/var/lib/influxdb
       - ./influxdb.conf:/etc/influxdb/influxdb.conf
