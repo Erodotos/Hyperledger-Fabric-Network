@@ -12,6 +12,23 @@ import (
 	"github.com/influxdata/influxdb-client-go/api"
 )
 
+type compositeKey struct { // a dummy reference point
+	deviceID      string
+	location      string
+	fromTimestamp time.Time
+	toTimestamp   time.Time
+}
+
+type PointInflux struct {
+	deviceID  string
+	timestamp time.Time
+	value     interface{}
+}
+
+func (p *PointInflux) String() string {
+	return `{ 'deviceID' : '` + p.deviceID + `' , 'timestamp' : '` + fmt.Sprint(p.timestamp.String()) + `' , 'value' : '` + fmt.Sprint(p.value) + `' }`
+}
+
 //for testing
 func check(e error) {
 	if e != nil {
@@ -21,9 +38,9 @@ func check(e error) {
 
 //The connection's struct
 type InfluxDB struct {
-	client         influxdb2.Client
-	writeAPI       api.WriteApi
-	queryAPI       api.QueryApi
+	client   influxdb2.Client
+	writeAPI api.WriteApi
+	queryAPI api.QueryApi
 }
 
 //The struct into which the received points are unmarshalled (i.e. json -> golang struct)
@@ -114,17 +131,19 @@ func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterfa
 	return nil
 }
 
-//Retrieves the points for the specified time period, meausurement and bucket. // NEEDS CONVERTING!
-func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterface, db string, rp string, start string, stop string, measurement string) (string, error) {
+//Retrieves the points for the specified time period, meausurement and bucket.
+func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterface, database string, retentionPolicy string, start string, stop string, aux string, queryType string) (string, error) {
 
-	result_str := ""
 	c := InfluxDB{}
-	_ = c.initConnection("http://influxdb:8086", "mydb", "", "", 2)
+	_ = c.initConnection("http://influxdb:8086", database, "", "", 2) // hardcoded for testing
 
 	//create flux query
-	fq := `from(bucket:"` + db + `/` + rp + `")
-		 	|> range(start:` + start + `, stop:` + stop + `)
-			|> filter(fn: (r) => r._measurement == "` + measurement + `")`
+	var fq string
+	if queryType == "true" { // query an individual device; device_id must be unique (not per location, but GLOBALLY)
+		fq = `from(bucket: "` + database + `/` + retentionPolicy + `")	|> range(start: ` + start + `, stop: ` + stop + `) |> filter(fn: (r) => r._measurement == "` + aux + `")`
+	} else { // query all devices in a given location
+		fq = `from(bucket: "` + database + `/` + retentionPolicy + `")	|> range(start: ` + start + `, stop: ` + stop + `) |> filter(fn: (r) => r.location == "` + aux + `")`
+	}
 
 	// get QueryTableResult
 	result, err := c.queryAPI.Query(context.Background(), fq)
@@ -135,26 +154,42 @@ func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterf
 		return "", err
 	}
 
-	// Iterate over query response
+	//create slice (i.e. dynamic array)
+	var recSet []PointInflux
+
+	//For every retrieved record
 	for result.Next() {
-		// Notice when group key has changed
-		if result.TableChanged() {
-			group_str := fmt.Sprintf("-----------------------------group_key: %s", result.TableMetadata().String())
-			result_str = result_str + group_str
-		}
-		// Get the data
-		record_str := fmt.Sprintf("record: %s", result.Record().String())
-		result_str = result_str + record_str
+
+		tuple := result.Record()
+		var rec PointInflux
+		rec = PointInflux{deviceID: tuple.Measurement(), timestamp: tuple.Time(), value: tuple.Value()}
+
+		recSet = append(recSet, rec)
+
 	}
-	// check for an error
+
+	// check for an error in result-set iteration
 	if result.Err() != nil {
 		return "", result.Err()
 	}
 
+	// return the points into a json format
+	resultStr := "{["
+	i := 0
+	for i < (len(recSet) - 1) {
+		resultStr = resultStr + recSet[i].String() + " , "
+		i++
+	}
+
+	if len(recSet) > 0 {
+		resultStr = resultStr + recSet[i].String()
+	}
+	resultStr = resultStr + "]}"
+
 	// Ensures background processes finishes
 	c.terminateConnection()
 
-	return result_str, nil
+	return resultStr, nil
 }
 
 // This function adds a new Device to the world state using id as key

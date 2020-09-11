@@ -87,6 +87,7 @@ updateDeviceLocation(){
         -c '{"function": "UpdateLocation","Args":["Dev1", "Warehouse C"]}'
 }
 
+
 writeInfluxContract(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_influx_chaincode"
@@ -99,13 +100,12 @@ writeInfluxContract(){
         -C $CHANNEL_NAME \
         -n ${CC_NAME}  \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "WriteToInflux","Args":["{\"points\":[{\"measurement\" : \"stat4\", \"tags\" : [{ \"key\" : \"p1t1\", \"value\" : \"a\"}, { \"key\" : \"p1t2\", \"value\" : \"b\" }],\"fields\" : [{\"key\" : \"p1f1\",\"value\":\"c\"}],\"timestamp\":\"1136239445\"},{\"measurement\":\"stat4\",\"tags\":[{\"key\":\"p2t1\",\"value\":\"a\"},{\"key\":\"p2t2\",\"value\":\"b\"}],\"fields\":[{\"key\":\"p2f1\",\"value\":\"c\"}],\"timestamp\":\"1136239446\"}]}"]}'
+        -c '{"function": "WriteToInflux","Args":["{\"points\":[{\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.5\"}],\"timestamp\":\"1136239445\"}, {\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.25\"}],\"timestamp\":\"1136239446\"}, {\"measurement\" : \"device_id_2\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"15.6\"}],\"timestamp\":\"1136239447\"},{\"measurement\" : \"device_id_3\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Larnaca\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"10\"}],\"timestamp\":\"1136239448\"}]}"]}'
 
-   
 }
 
 
-readInfluxContract(){
+readInfluxContract_device(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_influx_chaincode"
     setGlobalsForPeer0Org1
@@ -117,9 +117,24 @@ readInfluxContract(){
         -C $CHANNEL_NAME \
         -n ${CC_NAME}  \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "ReadFromInflux","Args":["mydb", "autogen", "-2h", "-1m", "stat4"]}'
+        -c '{"function": "ReadFromInflux","Args":["mydb", "autogen", "1136239445", "1599844935", "device_id_1", "true"]}'
         
-        #db, rp, start, stop, measurement 
+
+}
+
+readInfluxContract_location(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+    
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "ReadFromInflux","Args":["mydb", "autogen", "-2h", "-1m", "Nicosia", "false"]}'
 
 }
 
@@ -128,7 +143,6 @@ readInfluxContract(){
 # createDevice
 # queryDevice
 # updateDeviceLocation
-# writeInfluxContract   #CANNOT be used as --isInit
- readInfluxContract    #CANNOT be used as --isInit
-
-##{"points":[{"measurement" : "stat4", "tags" : [{ "key" : "p1t1", "value" : "a"}, { "key" : "p1t2", "value" : "b" }],"fields" : [{"key" : "p1f1","value":"c"}],"timestamp":"1136239445"},{"measurement":"stat4","tags":[{"key":"p2t1","value":"a"},{"key":"p2t2","value":"b"}],"fields":[{"key":"p2f1","value":"c"}],"timestamp":"1136239446"}]}
+# writeInfluxContract           #CANNOT be used as --isInit
+# readInfluxContract_device     #CANNOT be used as --isInit
+ readInfluxContract_location   #CANNOT be used as --isInit
