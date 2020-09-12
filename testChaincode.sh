@@ -45,49 +45,6 @@ setGlobalsForPeer1Org2(){
     
 }
 
-createDevice(){
-    CHANNEL_NAME=mychannel
-    CC_NAME="contract_influx_chaincode"
-    setGlobalsForPeer0Org1
-
-    peer chaincode invoke -o localhost:7050 \
-        --ordererTLSHostnameOverride orderer.example.com \
-        --tls $CORE_PEER_TLS_ENABLED \
-        --cafile $ORDERER_CA \
-        -C $CHANNEL_NAME \
-        -n ${CC_NAME}  \
-        --isInit \
-        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
-        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "CreateDevice","Args":["Dev1", "Warehouse A"]}'
-
-}
-
-queryDevice(){
-    CHANNEL_NAME=mychannel
-    CC_NAME="contract_influx_chaincode"
-    setGlobalsForPeer0Org1
-
-    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["QueryDevice", "Dev1"]}'
-}
-
-updateDeviceLocation(){
-    CHANNEL_NAME=mychannel
-    CC_NAME="contract_influx_chaincode"
-    setGlobalsForPeer0Org1
-
-    peer chaincode invoke -o localhost:7050 \
-        --ordererTLSHostnameOverride orderer.example.com \
-        --tls $CORE_PEER_TLS_ENABLED \
-        --cafile $ORDERER_CA \
-        -C $CHANNEL_NAME \
-        -n ${CC_NAME}  \
-        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
-        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "UpdateLocation","Args":["Dev1", "Warehouse C"]}'
-}
-
-
 writeInfluxContract(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_influx_chaincode"
@@ -139,10 +96,53 @@ readInfluxContract_location(){
 }
 
 
+createDevice(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --isInit \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "CreateDevice","Args":["device_id_1", "Nicosia"]}'
+
+}
+
+queryDevice(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+
+    peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["QueryDeviceMetadata", "device_id_1"]}'
+}
+
+NewDeviceMetadataEntry(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_influx_chaincode"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "NewDeviceMetadataEntry","Args":["json"]}'
+}
+
+
 #Contract-API: Influx Chaincode
 # createDevice
 # queryDevice
-# updateDeviceLocation
+# NewDeviceMetadataEntry
 # writeInfluxContract           #CANNOT be used as --isInit
 # readInfluxContract_device     #CANNOT be used as --isInit
- readInfluxContract_location   #CANNOT be used as --isInit
+# readInfluxContract_location   #CANNOT be used as --isInit
