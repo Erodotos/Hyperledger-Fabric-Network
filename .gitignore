@@ -8,3 +8,5 @@ log.txt
 mychannel.tx
 system-genesis-block/genesis.block
 channel-artifacts/mychannel.block
+api/node_modules/*
+api/package-lock.json
