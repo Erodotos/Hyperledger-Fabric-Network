@@ -110,7 +110,7 @@ createDevice(){
         --isInit \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "CreateDevice","Args":["device_id_1", "Nicosia"]}'
+        -c '{"function": "CreateDevice","Args":["device_id_1", "Nicosia", "10"]}'
 
 }
 
@@ -122,7 +122,7 @@ queryDevice(){
     peer chaincode query -C $CHANNEL_NAME -n ${CC_NAME} -c '{"Args":["QueryDeviceMetadata", "device_id_1"]}'
 }
 
-NewDeviceMetadataEntry(){
+writeBatch(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_influx_chaincode"
     setGlobalsForPeer0Org1
@@ -135,14 +135,20 @@ NewDeviceMetadataEntry(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "NewDeviceMetadataEntry","Args":["json"]}'
+        -c '{"function": "WriteBatch","Args":["device_id_1", "{\"points\":[{\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.5\"}],\"timestamp\":\"1136239477\"}, {\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.25\"}],\"timestamp\":\"1136239466\"}]}"]}'
+       # -c '{"function": "WriteBatch","Args":["device_id_1", "{\"points\":[]}"]}'
+       # -c '{"function": "WriteBatch","Args":["device_id_1", "{}"]}'             
+       
 }
 
 
 #Contract-API: Influx Chaincode
-# createDevice
-# queryDevice
-# NewDeviceMetadataEntry
+
 # writeInfluxContract           #CANNOT be used as --isInit
 # readInfluxContract_device     #CANNOT be used as --isInit
 # readInfluxContract_location   #CANNOT be used as --isInit
+
+# createDevice
+# queryDevice
+
+# writeBatch

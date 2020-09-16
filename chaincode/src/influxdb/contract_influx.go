@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -12,14 +13,21 @@ import (
 	"github.com/influxdata/influxdb-client-go/api"
 )
 
+type DeviceInfo struct { //contains details about the device
+	Location           string    `json:"location"`
+	BatchSizeSeconds   int       `json:"batchSizeSeconds"`
+	LastWriteTimestamp time.Time `json:"lastWriteTimestamp"`
+}
+
 type Metadata struct { //must decide on the metadata : PENDING
-	Digest   string `json:"digest"`
-	Interval string `json:"interval"`
+	Digest  string `json:"digest"`  // the corresponding fromTimestamp_toTimestamp can be found in the related composite key
+	IsEmpty bool   `json:"isEmpty"` // 'true' indicates an empty data batch; used to indicate a WriteTiInfluxError as well
 }
 type Auxiliary struct {
 	MetaArray []Metadata
 }
 
+// for retrieving data from influx
 type PointInflux struct {
 	deviceID  string
 	timestamp time.Time
@@ -37,7 +45,7 @@ type InfluxDB struct {
 	queryAPI api.QueryApi
 }
 
-//The struct into which the received points are unmarshalled (i.e. json -> golang struct)
+//The struct into which the received points (from the chaincode call) are unmarshalled (i.e. json -> golang struct)
 type PointsJson struct {
 	Points []struct {
 		Measurement string `json:"measurement"`
@@ -69,51 +77,6 @@ func (infdb *InfluxDB) initConnection(databaseURL, bucketName, username, passwor
 func (infdb *InfluxDB) terminateConnection() error {
 
 	infdb.client.Close()
-
-	return nil
-}
-
-func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterface, dataJson string) error {
-
-	infdb := InfluxDB{}
-	_ = infdb.initConnection("http://influxdb_demo:8086", "mydb", "", "", 2)
-
-	var pts PointsJson
-	err := json.Unmarshal([]byte(dataJson), &pts)
-	if err != nil {
-		return err
-	}
-
-	for _, point := range pts.Points { //for each point
-
-		tags_map := make(map[string]string)
-		for _, tag := range point.Tags { //create the tags
-			tags_map[tag.Key] = tag.Value
-		}
-
-		fields_map := make(map[string]interface{})
-		for _, field := range point.Fields { // create the fields
-			fields_map[field.Key] = field.Value
-		}
-
-		tm, err := strconv.ParseInt(point.Timestamp, 10, 64) //parse the timestamp into the biggest int available
-		if err != nil {
-			panic(err)
-		}
-
-		point_time := time.Unix(tm, 0)
-
-		p := influxdb2.NewPoint(
-			point.Measurement,
-			tags_map,
-			fields_map,
-			point_time)
-
-		// write asynchronously
-		infdb.writeAPI.WritePoint(p)
-	}
-
-	infdb.writeAPI.Flush()
 
 	return nil
 }
@@ -179,46 +142,63 @@ func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterf
 	return resultStr, nil
 }
 
-// This function adds a new Device to the world state.
-func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterface, id string, location string) error {
+// This function adds a new Device to the world state. //TESTED
+// id= the device's unique identifier
+// location= the device's location
+// batchsize= the batch size used for this device
+func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterface, id string, location string, batchsize string) (*DeviceInfo, error) {
 
 	// Create the composite keys
-	indexName := "location~deviceID"
-	devIndex, err := ctx.GetStub().CreateCompositeKey(indexName, []string{location, id})
-	if err != nil {
-		return err
-	}
-	indexName = "deviceID~interval"
+	indexName := "deviceID~fromToTimestamp"
 	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, "0_0"}) //fromTimestamp_toTimestamp
 	if err != nil {
-		return err
+		return nil, err
 	}
-
+	indexName = "location~deviceID"
+	devLocIndex, err := ctx.GetStub().CreateCompositeKey(indexName, []string{location, id})
+	if err != nil {
+		return nil, err
+	}
 	// empty value for initializing
 	value := []byte{0x00}
 
+	//Create the ordinary keys
+	deviceInfokey := id
+	bs, err := strconv.Atoi(batchsize)
+	if err != nil {
+		return nil, err
+	}
+	deviceInfo := DeviceInfo{Location: location, LastWriteTimestamp: time.Time{}, BatchSizeSeconds: bs}
+	deviceInfoBytes, err := json.Marshal(deviceInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	// Update the world state -> must update the world state in a transaction manner; either both go in, or none... : PENDING
-	err = ctx.GetStub().PutState(devIndex, value)
-	if err != nil {
-		return err
-	}
 	err = ctx.GetStub().PutState(devMeta, value)
-
 	if err != nil {
-		return err
+		return nil, err
+	}
+	err = ctx.GetStub().PutState(devLocIndex, value)
+	if err != nil {
+		return nil, err
+	}
+	err = ctx.GetStub().PutState(deviceInfokey, deviceInfoBytes)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil //success
+	return &deviceInfo, nil //success
 }
 
-// This function retrieves the metadata of all the ledger entries for the device at reference // previously called "QueryDevice"
+// This function retrieves the metadata of all the ledger entries for the device at reference //TESTED
 func (sc *SmartContract) QueryDeviceMetadata(ctx contractapi.TransactionContextInterface, id string) (*Auxiliary, error) {
 
 	var metaData []Metadata
 
-	// Query the deviceID~interval index by deviceID
+	// Query the deviceID~fromToTimestamp index by deviceID
 	// This will execute a key range query on all keys starting with the identifier of the device
-	deviceResultIterator, err := ctx.GetStub().GetStateByPartialCompositeKey("deviceID~interval", []string{id})
+	deviceResultIterator, err := ctx.GetStub().GetStateByPartialCompositeKey("deviceID~fromToTimestamp", []string{id})
 	if err != nil {
 		return nil, err
 	}
@@ -240,10 +220,10 @@ func (sc *SmartContract) QueryDeviceMetadata(ctx contractapi.TransactionContextI
 		}
 
 		//returnedDeviceName := compositeKeyParts[0]
-		returnedInterval := compositeKeyParts[1]
-		//fmt.Printf("deviceID= %s, interval= %s\n", returnedDeviceName, returnedInterval)
+		returnedfromToTimestamp := compositeKeyParts[1]
+		//fmt.Printf("deviceID= %s, fromToTimestamp= %s\n", returnedDeviceName, returnedfromToTimestamp)
 
-		if returnedInterval == "0_0" {
+		if returnedfromToTimestamp == "0_0" {
 			continue
 		}
 
@@ -268,30 +248,144 @@ func (sc *SmartContract) QueryDeviceMetadata(ctx contractapi.TransactionContextI
 	return data, nil // must be converted to return an array of Metadata
 }
 
-// This function stores new metadata on blockchain; used when new measurements come in (in json format)
-func (sc *SmartContract) NewDeviceMetadataEntry(ctx contractapi.TransactionContextInterface, dataJson string) (*Metadata, error) {
+// This function writes to influx; auxiliary. //TESTED
+// Does not return an error if the database it attempts to write in does not exist. //PENDING
+func WriteToInflux(pts PointsJson) error {
 
-	// Create the composite key
-	indexName := "deviceID~interval"
-	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{"device_id_1", "1_3"}) // hardcoded fields must be calculated from the dataJson string... : PENDING
-	if err != nil {
-		return nil, err
+	infdb := InfluxDB{}
+	_ = infdb.initConnection("http://influxdb_demo:8086", "mydb", "", "", 2)
+
+	for _, point := range pts.Points { //for each point
+
+		tags_map := make(map[string]string)
+		for _, tag := range point.Tags { //create the tags
+			tags_map[tag.Key] = tag.Value
+		}
+
+		fields_map := make(map[string]interface{})
+		for _, field := range point.Fields { // create the fields
+			fields_map[field.Key] = field.Value
+		}
+
+		tm, err := strconv.ParseInt(point.Timestamp, 10, 64) //parse the timestamp into the biggest int available
+		if err != nil {
+			panic(err)
+		}
+
+		point_time := time.Unix(tm, 0)
+
+		p := influxdb2.NewPoint(
+			point.Measurement,
+			tags_map,
+			fields_map,
+			point_time)
+
+		// write asynchronously
+		infdb.writeAPI.WritePoint(p)
 	}
 
-	metaEntry := Metadata{Digest: dataJson, Interval: "1_3"} // metadata need to be generated as required : PENDING
+	infdb.writeAPI.Flush()
 
+	return nil
+}
+
+/*************************************************************************************************************************/
+// This function writes to influx with a chaincode call; defined on the contract. // TESTED
+func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterface, dataJson string) error {
+
+	//data pre-processing
+	var pts PointsJson
+	err := json.Unmarshal([]byte(dataJson), &pts)
+	if err != nil {
+		return err
+	}
+
+	return WriteToInflux(pts)
+
+}
+
+// Returns the string representation of a PointsJson struct // TESTED
+func (p *PointsJson) String() string { //PENDING
+	return "string"
+}
+
+// Computes the digest of a PointsJson struct; uses its string representation
+func CalculateDigest(pts string) string { //PENDING
+	return pts
+}
+
+// Returns the next fromToTimestamp according to the device's lastWriteTimestamp and selected batch size
+func CalculateFromToTimestamp(dinfo DeviceInfo) string { //PENDING
+	return "1_3"
+}
+
+// This function stores new metadata on blockchain // NEEDS TESTING
+func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface, id string, dataJson string) (*Metadata, error) {
+
+	//Check if the device is registered/created; if not, return error, else get its details.
+	deviceInfo, err := ctx.GetStub().GetState(id)
+	if err != nil {
+		return nil, errors.New("Device does not exist!") //err
+	}
+	var dInfo DeviceInfo
+	err = json.Unmarshal([]byte(deviceInfo), &dInfo)
+	if err != nil {
+		return nil, errors.New("DeviceInfo Unmarshal failed!") //err
+	}
+
+	//Check if the data batch is empty
+	var pts PointsJson
+	err = json.Unmarshal([]byte(dataJson), &pts)
+	if err != nil {
+		return nil, errors.New("PointsJson unmarshal failed!") //err
+	}
+	isEmpty := false
+	if len(pts.Points) == 0 {
+		isEmpty = true
+	} else {
+		//Since device exists and there are points to write; attempt to write points in influx
+		err = WriteToInflux(pts)
+
+		// if writing to influx fails
+		if err != nil {
+			// trigger an empty entry in blockchain
+			pts.Points = nil
+			isEmpty = true
+		}
+	}
+
+	// If no data in the data batch skip the digest computation,
+	// else set it to false and calculate the digest.
+	digest := ""
+	if !isEmpty {
+		digest = CalculateDigest(pts.String())
+	}
+
+	// Prepare the value to be added to the world state
+	metaEntry := Metadata{Digest: digest, IsEmpty: isEmpty}
 	metaEntryBytes, err := json.Marshal(metaEntry)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Metadata marshal failed!") //err
 	}
+
+	// Create the composite key
+	indexName := "deviceID~fromToTimestamp"
+	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, CalculateFromToTimestamp(dInfo)})
+	if err != nil {
+		return nil, errors.New("Creation of composite key failed!") //err
+	}
+
+	//Update the world state
 	err = ctx.GetStub().PutState(devMeta, metaEntryBytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Updating the world state with metadata failed!") //err
 	}
 
 	return &metaEntry, nil
 
 }
+
+/*************************************************************************************************************************/
 
 func main() {
 
