@@ -13,12 +13,12 @@ const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
 
 //Register a new admin providing admin name and password
 router.post("/util/registerAdmin", async (req, res) => {
-    
+
     // this need to be fixed. Fabric wont accept other than these
     //input data for admin name and password
     let adminName = "admin"
     let password = "adminpw"
-    
+
     try {
         // Create a new CA client for interacting with the CA.
         const caURL = ccp.certificateAuthorities['ca.org1.example.com'].url;
@@ -51,71 +51,61 @@ router.post("/util/registerAdmin", async (req, res) => {
 //This function need to be reversed to an old version fabric-network for compatibility
 router.post("/util/registerUser", async (req, res) => {
 
-    try {
-        // Create a new CA client for interacting with the CA.
-        const caURL = ccp.certificateAuthorities['ca.org1.example.com'].url;
-        const ca = new FabricCAServices(caURL);
+    var adminName = req.body.admin
+    var username = req.body.username
 
+    try {
         // Create a new file system based wallet for managing identities.
         const walletPath = path.join(process.cwd(), 'wallet');
-        const wallet = await Wallets.newFileSystemWallet(walletPath);
+        const wallet = new FileSystemWallet(walletPath);
         console.log(`Wallet path: ${walletPath}`);
 
         // Check to see if we've already enrolled the user.
-        const userIdentity = await wallet.get(req.body.username);
-        if (userIdentity) {
-            console.log(`An identity for the user : ${req.body.username} already exists in the wallet`);
-            res.send(`An identity for the user : ${req.body.username} already exists in the wallet`)
+        const userExists = await wallet.exists(username);
+        if (userExists) {
+            console.log(`An identity for the user ${username} already exists in the wallet`);
+            res.send(`An identity for the user ${username} already exists in the wallet`);
         }
 
         // Check to see if we've already enrolled the admin user.
-        const adminIdentity = await wallet.get(req.body.adminname);
-        if (!adminIdentity) {
-            console.log(`An identity for the admin user ${req.body.adminname} does not exist in the wallet`);
-            res.send(`An identity for the admin user ${req.body.adminname} does not exist in the wallet`)
+        const adminExists = await wallet.exists(adminName);
+        if (!adminExists) {
+            console.log(`An identity for the admin user ${adminName} does not exist in the wallet`);
+            console.log('Run the enrollAdmin.js application before retrying');
+            res.send(`An identity for the admin user ${adminName} does not exist in the wallet`)
         }
 
-        // build a user object for authenticating with the CA
-        const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
-        const adminUser = await provider.getUserContext(adminIdentity, req.body.adminname);
+        // Create a new gateway for connecting to our peer node.
+        const gateway = new Gateway();
+        await gateway.connect(ccp, { wallet, identity: adminName, discovery: { enabled: false } });
+
+        // Get the CA client object from the gateway for interacting with the CA.
+        const ca = gateway.getClient().getCertificateAuthority();
+        const adminIdentity = gateway.getCurrentIdentity();
 
         // Register the user, enroll the user, and import the new identity into the wallet.
-        const secret = await ca.register({
-            affiliation: 'org1',
-            enrollmentID: req.body.username,
-            role: 'user-client'
-        }, adminUser);
-
-        const enrollment = await ca.enroll({
-            enrollmentID: req.body.username,
-            enrollmentSecret: secret
-        });
-
-        const x509Identity = {
-            credentials: {
-                certificate: enrollment.certificate,
-                privateKey: enrollment.key.toBytes(),
+        const secret = await ca.register(
+            {
+                affiliation: 'org1.department1',
+                enrollmentID: username,
+                role: 'client'
             },
-            mspId: 'Org1MSP',
-            type: 'X.509',
-        };
+            adminIdentity
+        );
 
-        await wallet.put(req.body.username, x509Identity);
-        console.log(`Successfully registered and enrolled admin user ${req.body.username} and imported it into the wallet`);
-
-        res.send(x509Identity)
+        const enrollment = await ca.enroll({ enrollmentID: username, enrollmentSecret: secret });
+        const userIdentity = X509WalletMixin.createIdentity('Org1MSP', enrollment.certificate, enrollment.key.toBytes());
+        wallet.import(username, userIdentity);
+        console.log(`Successfully registered and enrolled admin user ${username} and imported it into the wallet`);
+        res.send(userIdentity);
     } catch (error) {
-        console.error(`Failed to register user ${req.body.username}: ${error}`);
-        res.send(error)
+        console.log(error)
+        res.send(`Failed to register user ${username} : ${error}`);
     }
-
-
 });
 
-router.get("/util/health", (req, res) => {
+router.get("/util/ping", (req, res) => {
     res.send("API is running")
 });
-
-
 
 module.exports = router;
