@@ -404,6 +404,9 @@ func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface,
 		return nil, errors.New("World state update: DeviceInfo Marshal failed!") //err
 	}
 	err = ctx.GetStub().PutState(id, deviceInfo)
+	if err != nil {
+		return nil, errors.New("World state update: Updating the world state with DeviceInfo failed!") //err
+	}
 
 	//metadata
 	err = ctx.GetStub().PutState(devMeta, metaEntryBytes)
