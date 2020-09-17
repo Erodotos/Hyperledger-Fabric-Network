@@ -110,7 +110,7 @@ createDevice(){
         --isInit \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "CreateDevice","Args":["device_id_1", "Nicosia", "10"]}'
+        -c '{"function": "CreateDevice","Args":["device_id_1", "Nicosia", "1136239477"]}'
 
 }
 
@@ -135,9 +135,10 @@ writeBatch(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "WriteBatch","Args":["device_id_1", "{\"points\":[{\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.5\"}],\"timestamp\":\"1136239477\"}, {\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.25\"}],\"timestamp\":\"1136239466\"}]}"]}'
-       # -c '{"function": "WriteBatch","Args":["device_id_1", "{\"points\":[]}"]}'
-       # -c '{"function": "WriteBatch","Args":["device_id_1", "{}"]}'             
+        -c '{"function": "WriteBatch","Args":["device_id_1", "1136239477", "1136239478", "{\"points\":[{\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.5\"}],\"timestamp\":\"1136239477\"}, {\"measurement\" : \"device_id_1\", \"tags\" : [{ \"key\" : \"location\", \"value\" : \"Nicosia\"}],\"fields\" : [{\"key\" : \"value\",\"value\":\"0.25\"}],\"timestamp\":\"1136239466\"}]}"]}'
+        #-c '{"function": "WriteBatch","Args":["device_id_1", "1136239477", "1136299478", "{}"]}'             
+        
+       # -c '{"function": "WriteBatch","Args":["device_id_1", "1136239477", "1136239479", "{\"points\":[]}"]}'
        
 }
 
@@ -150,5 +151,4 @@ writeBatch(){
 
 # createDevice
 # queryDevice
-
 # writeBatch

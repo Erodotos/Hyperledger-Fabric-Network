@@ -14,9 +14,8 @@ import (
 )
 
 type DeviceInfo struct { //contains details about the device
-	Location           string    `json:"location"`
-	BatchSizeSeconds   int       `json:"batchSizeSeconds"`
-	LastWriteTimestamp time.Time `json:"lastWriteTimestamp"`
+	Location           string `json:"location"`
+	LastWriteTimestamp int64  `json:"lastWriteTimestamp"`
 }
 
 type Metadata struct { //must decide on the metadata : PENDING
@@ -30,12 +29,12 @@ type Auxiliary struct {
 // for retrieving data from influx
 type PointInflux struct {
 	deviceID  string
-	timestamp time.Time
+	timestamp int64
 	value     interface{}
 }
 
 func (p *PointInflux) String() string {
-	return `{ 'deviceID' : '` + p.deviceID + `' , 'timestamp' : '` + fmt.Sprint(p.timestamp.String()) + `' , 'value' : '` + fmt.Sprint(p.value) + `' }`
+	return fmt.Sprintf(`{ 'deviceID' : '%s' , 'timestamp' : '%v' , 'value' : '%v' }`, p.deviceID, p.timestamp, p.value)
 }
 
 //The connection's struct
@@ -60,6 +59,32 @@ type PointsJson struct {
 		Timestamp string `json:"timestamp"`
 	} `json:"points"`
 }
+
+// Returns a string representation of a PointsJson struct
+func (p *PointsJson) String() string {
+
+	str := `[`
+
+	for _, pnt := range p.Points {
+
+		str = str + `(` + pnt.Measurement
+
+		for _, t := range pnt.Tags {
+			str = str + `,` + t.Key + `:` + t.Value
+		}
+
+		for _, f := range pnt.Fields {
+			str = str + `,` + f.Key + `:` + f.Value
+		}
+
+		str = str + `)`
+	}
+
+	str = str + `]`
+
+	return str
+}
+
 type SmartContract struct {
 	contractapi.Contract
 }
@@ -112,7 +137,7 @@ func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterf
 
 		tuple := result.Record()
 		var rec PointInflux
-		rec = PointInflux{deviceID: tuple.Measurement(), timestamp: tuple.Time(), value: tuple.Value()}
+		rec = PointInflux{deviceID: tuple.Measurement(), timestamp: tuple.Time().Unix(), value: tuple.Value()}
 
 		recSet = append(recSet, rec)
 
@@ -145,8 +170,8 @@ func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterf
 // This function adds a new Device to the world state. //TESTED
 // id= the device's unique identifier
 // location= the device's location
-// batchsize= the batch size used for this device
-func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterface, id string, location string, batchsize string) (*DeviceInfo, error) {
+// tmstamp= the timestamp on which the
+func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterface, id string, location string, tmstamp string) (*DeviceInfo, error) {
 
 	// Create the composite keys
 	indexName := "deviceID~fromToTimestamp"
@@ -164,11 +189,11 @@ func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterfac
 
 	//Create the ordinary keys
 	deviceInfokey := id
-	bs, err := strconv.Atoi(batchsize)
+	tm, err := strconv.ParseInt(tmstamp, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	deviceInfo := DeviceInfo{Location: location, LastWriteTimestamp: time.Time{}, BatchSizeSeconds: bs}
+	deviceInfo := DeviceInfo{Location: location, LastWriteTimestamp: tm}
 	deviceInfoBytes, err := json.Marshal(deviceInfo)
 	if err != nil {
 		return nil, err
@@ -267,7 +292,8 @@ func WriteToInflux(pts PointsJson) error {
 			fields_map[field.Key] = field.Value
 		}
 
-		tm, err := strconv.ParseInt(point.Timestamp, 10, 64) //parse the timestamp into the biggest int available
+		//parse the timestamp (received as an integer contained in a string) into the biggest int available
+		tm, err := strconv.ParseInt(point.Timestamp, 10, 64)
 		if err != nil {
 			panic(err)
 		}
@@ -289,7 +315,6 @@ func WriteToInflux(pts PointsJson) error {
 	return nil
 }
 
-/*************************************************************************************************************************/
 // This function writes to influx with a chaincode call; defined on the contract. // TESTED
 func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterface, dataJson string) error {
 
@@ -304,23 +329,13 @@ func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterfa
 
 }
 
-// Returns the string representation of a PointsJson struct // TESTED
-func (p *PointsJson) String() string { //PENDING
-	return "string"
-}
-
 // Computes the digest of a PointsJson struct; uses its string representation
 func CalculateDigest(pts string) string { //PENDING
 	return pts
 }
 
-// Returns the next fromToTimestamp according to the device's lastWriteTimestamp and selected batch size
-func CalculateFromToTimestamp(dinfo DeviceInfo) string { //PENDING
-	return "1_3"
-}
-
-// This function stores new metadata on blockchain // NEEDS TESTING
-func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface, id string, dataJson string) (*Metadata, error) {
+// This function stores new metadata on blockchain // TESTED
+func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface, id, fromTimestamp, toTimestamp string, dataJson string) (*Metadata, error) {
 
 	//Check if the device is registered/created; if not, return error, else get its details.
 	deviceInfo, err := ctx.GetStub().GetState(id)
@@ -332,6 +347,13 @@ func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return nil, errors.New("DeviceInfo Unmarshal failed!") //err
 	}
+
+	//update device info struct
+	tm, err := strconv.ParseInt(toTimestamp, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	dInfo.LastWriteTimestamp = tm
 
 	//Check if the data batch is empty
 	var pts PointsJson
@@ -370,22 +392,28 @@ func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface,
 
 	// Create the composite key
 	indexName := "deviceID~fromToTimestamp"
-	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, CalculateFromToTimestamp(dInfo)})
+	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, fromTimestamp + `_` + toTimestamp})
 	if err != nil {
 		return nil, errors.New("Creation of composite key failed!") //err
 	}
 
 	//Update the world state
+	//device info
+	deviceInfo, err = json.Marshal(dInfo)
+	if err != nil {
+		return nil, errors.New("World state update: DeviceInfo Marshal failed!") //err
+	}
+	err = ctx.GetStub().PutState(id, deviceInfo)
+
+	//metadata
 	err = ctx.GetStub().PutState(devMeta, metaEntryBytes)
 	if err != nil {
-		return nil, errors.New("Updating the world state with metadata failed!") //err
+		return nil, errors.New("World state update: Updating the world state with metadata failed!") //err
 	}
 
 	return &metaEntry, nil
 
 }
-
-/*************************************************************************************************************************/
 
 func main() {
 
@@ -401,5 +429,3 @@ func main() {
 	}
 
 }
-
-//docker exec -it container_name bash
