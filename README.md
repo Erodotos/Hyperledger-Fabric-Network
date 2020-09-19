@@ -193,8 +193,8 @@ Bring up the network and test chaincode:
 1. generateNetworkArtifacts.sh 
 2. networkUp.sh
 3. channelUp.sh
-4. deployChaincode.sh
-5. testChaincode.sh
+4. deployChaincode_<chaincode_name>.sh
+5. testChaincode_<chaincode_name>.sh
 ```
 
 Bring down network and clean directory
