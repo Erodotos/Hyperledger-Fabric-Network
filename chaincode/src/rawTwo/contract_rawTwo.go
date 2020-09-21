@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -20,15 +19,13 @@ type TelcoEntry struct {
 
 // To add helpful information to the data
 type TelcoData struct {
-	MeasInfo     string       `json:"meas_info"` //col 1
-	MinTimestamp int64        `json:"min_timestamp"`
-	MaxTimestamp int64        `json:"max_timestamp"`
-	Batch        []TelcoEntry `json:"batch"`
+	MeasInfo string       `json:"meas_info"` //col 1
+	Batch    []TelcoEntry `json:"batch"`
 }
 
-// ===================================================================================
+// =========
 // Main
-// ===================================================================================
+// =========
 func main() {
 	err := shim.Start(new(TelcoData))
 	if err != nil {
@@ -36,12 +33,14 @@ func main() {
 	}
 }
 
+// ===========================
 // Init initializes chaincode
 // ===========================
 func (t *TelcoData) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
+// ========================================
 // Invoke - Our entry point for Invocations
 // ========================================
 func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
@@ -59,6 +58,7 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Error("Received unknown function invocation")
 }
 
+// ===========================================================================================
 // Writes the received data batch in the ledger.
 // The data in the batch must refer to the "meas_info".
 // Arguments:
@@ -80,6 +80,7 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 //		"timestamp":201512200045
 //	}
 //]
+// ===========================================================================================
 func (t *TelcoData) WriteBatch(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	// Cast the data into the desired format
@@ -107,7 +108,6 @@ func (t *TelcoData) WriteBatch(stub shim.ChaincodeStubInterface, args []string) 
 	return shim.Success(batchBytes)
 }
 
-/*
 // Retrieves the data_batches that contain entries of interest; may return more data than requested.
 //
 // PENDING: Drop the unnecessary data
@@ -117,19 +117,29 @@ func (t *TelcoData) QueryRangeWithPagination(stub shim.ChaincodeStubInterface, a
 
 	return shim.Success([]byte{0x00})
 }
-*/
 
-// =========================================================================================
+// =======================================================================================================
 // QueryBatchRangeWithPagination executes the passed in query string with
-// pagination info. Result set is built and returned as a byte array containing the JSON results.
-// =========================================================================================
+// pagination info. Result set is built and returned as a TelcoEntry array containing the results.
+//
+// NOTE: The queryString can be use to retrieve any combination of meas_info(s) and couter(s).
+// 		 The fromTimestamp and toTimestamp are used to bound the results returned, and cannot be ommited.
+//
+// EXAMPLE queryString: "{"selector":{"$and":[{"meas_info":"dummy_meas_info"},{"batch":{"$elemMatch":{"counter":{"$and":[{"$gt":5},{"$lt":99999999}]}}}}]}}"
+//
+// PENDING: Currently only returns the 1st page of results. Must implement a while-loop to use
+//		the bookmark to retrieve all of them.
+//
+// ========================================================================================================
 func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
-	// "queryString"
-	if len(args) < 3 {
-		return shim.Error("Incorrect number of arguments. Expecting 3")
-	}
+	//arg[0]=queryString -> to declare meas_info, counter selector
+	//arg[1]=pageSize
+	//arg[2]=bookmark
+	//arg[3]=fromTimestamp -> to declare the time interval
+	//arg[4]=toTimestamp
 
+	// Cast accordingly
 	queryString := args[0]
 	//return type of ParseInt is int64... but we need int32
 	pageSize, err := strconv.ParseInt(args[1], 10, 32)
@@ -137,8 +147,14 @@ func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterfa
 		return shim.Error(err.Error())
 	}
 	bookmark := args[2]
-
-	fmt.Printf("- QueryBatchRangeWithPagination queryString:\n%s\n", queryString)
+	fromTimestamp, err := strconv.ParseInt(args[3], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	toTimestamp, err := strconv.ParseInt(args[4], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
 
 	resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
 	if err != nil {
@@ -146,67 +162,50 @@ func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterfa
 	}
 	defer resultsIterator.Close()
 
-	buffer, err := constructQueryResponseFromIterator(resultsIterator)
+	entries, bookmark, err := constructQueryResponseFromIterator(resultsIterator, responseMetadata, fromTimestamp, toTimestamp)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	bufferWithPaginationInfo := addPaginationMetadataToQueryResults(buffer, responseMetadata)
+	entriesBytes, err := json.Marshal(entries)
+	if err != nil {
+		return shim.Error("Marshal failed!")
+	}
 
-	fmt.Printf("- getQueryResultForQueryString queryResult:\n%s\n", bufferWithPaginationInfo.String())
-
-	return shim.Success(buffer.Bytes())
+	return shim.Success(entriesBytes)
 }
 
-// ===========================================================================================
-// constructQueryResponseFromIterator constructs a JSON array containing query results from
+// ================================================================================================
+// constructQueryResponseFromIterator constructs an array containing query results of interest from
 // a given result iterator
-// ===========================================================================================
-func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface) (*bytes.Buffer, error) {
-	// buffer is a JSON array containing QueryResults
-	var buffer bytes.Buffer
-	buffer.WriteString("[")
+// ================================================================================================
+func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface, responseMetadata *pb.QueryResponseMetadata, fromTimestamp, toTimestamp int64) (*[]TelcoEntry, string, error) {
 
-	bArrayMemberAlreadyWritten := false
+	// Declare TelcoEntry collector
+	var entries []TelcoEntry
+
+	// Get the query results
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		// Add a comma before array members, suppress it for the first array member
-		if bArrayMemberAlreadyWritten == true {
-			buffer.WriteString(",")
-		}
-		buffer.WriteString("{\"Key\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(queryResponse.Key)
-		buffer.WriteString("\"")
 
-		buffer.WriteString(", \"Record\":")
-		// Record is a JSON object, so we write as-is
-		buffer.WriteString(string(queryResponse.Value))
-		buffer.WriteString("}")
-		bArrayMemberAlreadyWritten = true
+		// Get the retrieved record
+		var teldata TelcoData
+		err = json.Unmarshal(queryResponse.Value, &teldata)
+		if err != nil {
+			return nil, "", err
+		}
+
+		// Iterate over returned entries
+		for _, b := range teldata.Batch {
+			if b.Timestamp >= fromTimestamp && b.Timestamp < toTimestamp {
+				entries = append(entries, b)
+			}
+		}
+
 	}
-	buffer.WriteString("]")
 
-	return &buffer, nil
-}
-
-// ===========================================================================================
-// addPaginationMetadataToQueryResults adds QueryResponseMetadata, which contains pagination
-// info, to the constructed query results
-// ===========================================================================================
-func addPaginationMetadataToQueryResults(buffer *bytes.Buffer, responseMetadata *pb.QueryResponseMetadata) *bytes.Buffer {
-
-	buffer.WriteString("[{\"ResponseMetadata\":{\"RecordsCount\":")
-	buffer.WriteString("\"")
-	buffer.WriteString(fmt.Sprintf("%v", responseMetadata.FetchedRecordsCount))
-	buffer.WriteString("\"")
-	buffer.WriteString(", \"Bookmark\":")
-	buffer.WriteString("\"")
-	buffer.WriteString(responseMetadata.Bookmark)
-	buffer.WriteString("\"}}]")
-
-	return buffer
+	return &entries, responseMetadata.Bookmark, nil
 }
