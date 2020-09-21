@@ -45,7 +45,7 @@ setGlobalsForPeer1Org2(){
     
 }
 
-createDevice(){
+WriteBatch(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_rawTwo"
     setGlobalsForPeer0Org1
@@ -59,11 +59,10 @@ createDevice(){
         --isInit \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "CreateDevice","Args":["device_id_1", "Nicosia", "1136239477"]}'
-
+        -c '{"function": "WriteBatch", "Args":["[{\"counter\":\"50331654\",\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":\"4863\",\"timestamp\":\"201512200045\"},{\"counter\":\"50331655\",\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":\"268\",\"timestamp\":\"201512200045\"}]", "dummy_meas_info", "202109211004"]}'
 }
 
 
 #Contract-API: Raw I Chaincode
 
- createDevice
+WriteBatch #must call it twice; 1st with isInit, 2nd without
