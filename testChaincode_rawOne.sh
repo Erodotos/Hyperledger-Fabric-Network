@@ -45,7 +45,7 @@ setGlobalsForPeer1Org2(){
     
 }
 
-createDevice(){
+init(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_rawOne"
     setGlobalsForPeer0Org1
@@ -59,11 +59,42 @@ createDevice(){
         --isInit \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "PENDING","Args":["PENDING"]}'
-
+        -c '{"function": "Init","Args": []}'
 }
 
+newTelcoEntry(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawOne"
+    setGlobalsForPeer0Org1
 
-#Contract-API: Raw II Chaincode
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "newTelcoEntry","Args": ["50331648", "50331654", "8424bf520db261335d52a0b827a78538", "4863", "201512200045"]}'
+}
 
- createDevice
+updateValue(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawOne"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "updateValue","Args": ["50331648", "50331654", "4000", "201512200047"]}'
+}
+
+# init
+# newTelcoEntry
+# updateValue
+

@@ -1,434 +1,186 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
-	"time"
+	"strings"
 
-	"github.com/hyperledger/fabric-contract-api-go/contractapi"
-	influxdb2 "github.com/influxdata/influxdb-client-go"
-	"github.com/influxdata/influxdb-client-go/api"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-protos-go/peer"
 )
 
-type DeviceInfo struct { //contains details about the device
-	Location           string `json:"location"`
-	LastWriteTimestamp int64  `json:"lastWriteTimestamp"`
-}
-
-type Metadata struct { //must decide on the metadata : PENDING
-	Digest  string `json:"digest"`  // the corresponding fromTimestamp_toTimestamp can be found in the related composite key
-	IsEmpty bool   `json:"isEmpty"` // 'true' indicates an empty data batch; used to indicate a WriteTiInfluxError as well
-}
-type Auxiliary struct {
-	MetaArray []Metadata
-}
-
-// for retrieving data from influx
-type PointInflux struct {
-	deviceID  string
-	timestamp int64
-	value     interface{}
-}
-
-func (p *PointInflux) String() string {
-	return fmt.Sprintf(`{ 'deviceID' : '%s' , 'timestamp' : '%v' , 'value' : '%v' }`, p.deviceID, p.timestamp, p.value)
-}
-
-//The connection's struct
-type InfluxDB struct {
-	client   influxdb2.Client
-	writeAPI api.WriteApi
-	queryAPI api.QueryApi
-}
-
-//The struct into which the received points (from the chaincode call) are unmarshalled (i.e. json -> golang struct)
-type PointsJson struct {
-	Points []struct {
-		Measurement string `json:"measurement"`
-		Tags        []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		} `json:"tags"`
-		Fields []struct {
-			Key   string `json:"key"`
-			Value string `json:"value"`
-		} `json:"fields"`
-		Timestamp string `json:"timestamp"`
-	} `json:"points"`
-}
-
-// Returns a string representation of a PointsJson struct
-func (p *PointsJson) String() string {
-
-	str := `[`
-
-	for _, pnt := range p.Points {
-
-		str = str + `(` + pnt.Measurement
-
-		for _, t := range pnt.Tags {
-			str = str + `,` + t.Key + `:` + t.Value
-		}
-
-		for _, f := range pnt.Fields {
-			str = str + `,` + f.Key + `:` + f.Value
-		}
-
-		str = str + `)`
-	}
-
-	str = str + `]`
-
-	return str
-}
-
+//SmartContract
 type SmartContract struct {
-	contractapi.Contract
 }
 
-//Initializes the connection's client, writeApi and queryApi.
-func (infdb *InfluxDB) initConnection(databaseURL, bucketName, username, password string, batchSize uint) error {
-
-	infdb.client = influxdb2.NewClientWithOptions(databaseURL, fmt.Sprintf("%s:%s", username, password), influxdb2.DefaultOptions().SetBatchSize(batchSize))
-	infdb.writeAPI = infdb.client.WriteApi("my-org", bucketName)
-	infdb.queryAPI = infdb.client.QueryApi( /*"my-org"*/ "")
-
-	return nil
+//For this implementaion I assumed that key is
+//MeasInfo and Counter. We use this struct to
+//store data in the ledger.
+type TelcoEntry struct {
+	MeasInfo  string  `json:"meas_info"`   //col 1
+	Counter   string  `json:"counter"`   //col 2
+	CellName  string  `json:"cell_name"` //col 5
+	Value     float32 `json:"value"`     //col 6
+	Timestamp int64   `json:"timestamp"` //col 7, e.g. '201512200045' -> '%Y%m%d%H%M', this format can be used with numeric comparisons
 }
 
-func (infdb *InfluxDB) terminateConnection() error {
-
-	infdb.client.Close()
-
-	return nil
+func (s *SmartContract) Init(stub shim.ChaincodeStubInterface) peer.Response {
+	fmt.Println("Chaincode instantiated")
+	return shim.Success(nil)
 }
 
-//Retrieves the points for the specified time period, meausurement and bucket.
-func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterface, database string, retentionPolicy string, start string, stop string, aux string, queryType string) (string, error) {
+func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 
-	c := InfluxDB{}
-	_ = c.initConnection("http://influxdb:8086", database, "", "", 2) // hardcoded for testing
+	function, args := stub.GetFunctionAndParameters()
 
-	//create flux query
-	var fq string
-	if queryType == "true" { // query an individual device; device_id must be unique (not per location, but GLOBALLY)
-		fq = `from(bucket: "` + database + `/` + retentionPolicy + `")	|> range(start: ` + start + `, stop: ` + stop + `) |> filter(fn: (r) => r._measurement == "` + aux + `")`
-	} else { // query all devices in a given location
-		fq = `from(bucket: "` + database + `/` + retentionPolicy + `")	|> range(start: ` + start + `, stop: ` + stop + `) |> filter(fn: (r) => r.location == "` + aux + `")`
+	if function == "newTelcoEntry" {
+		return s.newTelcoEntry(stub, args)
+	} else if function == "updateValue" {
+		return s.updateValue(stub, args)
 	}
 
-	// get QueryTableResult
-	result, err := c.queryAPI.Query(context.Background(), fq)
-
-	//on error, return
-	if err != nil {
-		fmt.Printf("Query Error: %s\n", err.Error())
-		return "", err
-	}
-
-	//create slice (i.e. dynamic array)
-	var recSet []PointInflux
-
-	//For every retrieved record
-	for result.Next() {
-
-		tuple := result.Record()
-		var rec PointInflux
-		rec = PointInflux{deviceID: tuple.Measurement(), timestamp: tuple.Time().Unix(), value: tuple.Value()}
-
-		recSet = append(recSet, rec)
-
-	}
-
-	// check for an error in result-set iteration
-	if result.Err() != nil {
-		return "", result.Err()
-	}
-
-	// return the points into a json format
-	resultStr := "{["
-	i := 0
-	for i < (len(recSet) - 1) {
-		resultStr = resultStr + recSet[i].String() + " , "
-		i++
-	}
-
-	if len(recSet) > 0 {
-		resultStr = resultStr + recSet[i].String()
-	}
-	resultStr = resultStr + "]}"
-
-	// Ensures background processes finishes
-	c.terminateConnection()
-
-	return resultStr, nil
+	return shim.Success(nil)
 }
 
-// This function adds a new Device to the world state. //TESTED
-// id= the device's unique identifier
-// location= the device's location
-// tmstamp= the timestamp on which the
-func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterface, id string, location string, tmstamp string) (*DeviceInfo, error) {
+func (s *SmartContract) newTelcoEntry(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 
-	// Create the composite keys
-	indexName := "deviceID~fromToTimestamp"
-	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, "0_0"}) //fromTimestamp_toTimestamp
-	if err != nil {
-		return nil, err
-	}
-	indexName = "location~deviceID"
-	devLocIndex, err := ctx.GetStub().CreateCompositeKey(indexName, []string{location, id})
-	if err != nil {
-		return nil, err
-	}
-	// empty value for initializing
-	value := []byte{0x00}
-
-	//Create the ordinary keys
-	deviceInfokey := id
-	tm, err := strconv.ParseInt(tmstamp, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	deviceInfo := DeviceInfo{Location: location, LastWriteTimestamp: tm}
-	deviceInfoBytes, err := json.Marshal(deviceInfo)
-	if err != nil {
-		return nil, err
+	
+	// ==== Input sanitation ====
+	if len(args) != 5 {
+		return shim.Error("Invalid number of arguments.")
 	}
 
-	// Update the world state -> must update the world state in a transaction manner; either both go in, or none... : PENDING
-	err = ctx.GetStub().PutState(devMeta, value)
-	if err != nil {
-		return nil, err
-	}
-	err = ctx.GetStub().PutState(devLocIndex, value)
-	if err != nil {
-		return nil, err
-	}
-	err = ctx.GetStub().PutState(deviceInfokey, deviceInfoBytes)
-	if err != nil {
-		return nil, err
+	meas_info :=  strings.ToLower(args[0])
+	cell_name :=  strings.ToLower(args[2])
+	if (len(cell_name) != 32){
+		return shim.Error("Cell name must have 32 characters length")
 	}
 
-	return &deviceInfo, nil //success
+	counter := strings.ToLower(args[1])
+
+	v, err :=  strconv.ParseFloat(args[3],32)
+	if err != nil {
+		return shim.Error("4th argument must be a numeric string")
+	}
+	value := float32(v)
+
+	timestamp, err := strconv.ParseInt(args[4], 10, 64)
+	if err != nil {
+		return shim.Error("5th argument must be a numeric string")
+	}
+
+	// ==== Check if Telco record already exists ====
+	record_id := meas_info + "_" + counter
+	recordAsBytes, err := stub.GetState(record_id)
+	if err != nil {
+		return shim.Error("Failed to get record : " + err.Error())
+	} else if recordAsBytes != nil {
+		fmt.Println("This record_id already exists: " + record_id)
+		return shim.Error("This record already exists: " + record_id)
+	}
+
+	// ==== Create Telco Entry object and marshal to JSON ====
+	record := TelcoEntry{
+		MeasInfo: meas_info,
+		Counter: counter, 
+		CellName: cell_name,
+		Value : value,
+		Timestamp : timestamp,
+	}
+
+	valueAsBytes, err := json.Marshal(record)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// === Save record to world state ===
+	err = stub.PutState(record_id, valueAsBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(nil)
 }
 
-// This function retrieves the metadata of all the ledger entries for the device at reference //TESTED
-func (sc *SmartContract) QueryDeviceMetadata(ctx contractapi.TransactionContextInterface, id string) (*Auxiliary, error) {
+func (s *SmartContract) updateValue(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 
-	var metaData []Metadata
+	// ==== Input sanitation ====
+	// if len(args) != 4 {
+	// 	return shim.Error("Invalid number of arguments.")
+	// }
 
-	// Query the deviceID~fromToTimestamp index by deviceID
-	// This will execute a key range query on all keys starting with the identifier of the device
-	deviceResultIterator, err := ctx.GetStub().GetStateByPartialCompositeKey("deviceID~fromToTimestamp", []string{id})
+	meas_info :=  strings.ToLower(args[0])
+
+	counter := strings.ToLower(args[1])
+
+	v, err :=  strconv.ParseFloat(args[2],32)
 	if err != nil {
-		return nil, err
+		return shim.Error("4th argument must be a numeric string")
+	}
+	value := float32(v)
+
+	timestamp, err := strconv.ParseInt(args[3], 10, 64)
+	if err != nil {
+		return shim.Error("5th argument must be a numeric string")
 	}
 
-	// Iterate through result set and for each device found
-	var i int
-	for i = 0; deviceResultIterator.HasNext(); i++ {
-
-		// Get the ledger entry
-		deviceEntry, err := deviceResultIterator.Next()
-		if err != nil {
-			return nil, err
-		}
-
-		// split key, and ensure the "0_0" (i.e. init) ledger entry is not processed
-		_, compositeKeyParts, err := ctx.GetStub().SplitCompositeKey(deviceEntry.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		//returnedDeviceName := compositeKeyParts[0]
-		returnedfromToTimestamp := compositeKeyParts[1]
-		//fmt.Printf("deviceID= %s, fromToTimestamp= %s\n", returnedDeviceName, returnedfromToTimestamp)
-
-		if returnedfromToTimestamp == "0_0" {
-			continue
-		}
-
-		// Get the value
-		temp := deviceEntry.GetValue()
-		var metaEntry Metadata
-		err = json.Unmarshal(temp, &metaEntry)
-		if err != nil {
-			return nil, err
-		}
-
-		metaData = append(metaData, metaEntry)
-
+	// ==== Check if Telco record already exists ====
+	record_id := meas_info + "_" + counter
+	recordAsBytes, err := stub.GetState(record_id)
+	if err != nil {
+		return shim.Error("Failed to get record : " + err.Error())
+	} else if recordAsBytes == nil {
+		fmt.Println("This record_id does not exists: " + record_id)
+		return shim.Error("This record does not exists: " + record_id)
 	}
 
-	data := new(Auxiliary)
-	if len(metaData) == 0 { //escape null pointer error in case no ledger entries in array
-		return nil, nil
+	fmt.Println("checkpoint 1")
+	// ==== Unmarshal Teclo Entry from JSON ====
+	record := new(TelcoEntry)
+	err = json.Unmarshal(recordAsBytes, &record)
+	if err != nil {
+		return shim.Error(err.Error())
 	}
-	data.MetaArray = metaData
 
-	return data, nil // must be converted to return an array of Metadata
+	fmt.Println("checkpoint 2")
+
+	// ==== Update value and timestamp ====
+	
+	record.Value = value
+	record.Timestamp = timestamp
+	
+	recordJSONAsBytes, err := json.Marshal(record)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	fmt.Println("checkpoint 3")
+
+	// === Save updated record to world state ===
+	err = stub.PutState(record_id, recordJSONAsBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	fmt.Println("checkpoint 4")
+
+	return shim.Success(nil)
 }
 
-// This function writes to influx; auxiliary. //TESTED
-// Does not return an error if the database it attempts to write in does not exist. //PENDING
-func WriteToInflux(pts PointsJson) error {
-
-	infdb := InfluxDB{}
-	_ = infdb.initConnection("http://influxdb_demo:8086", "mydb", "", "", 2)
-
-	for _, point := range pts.Points { //for each point
-
-		tags_map := make(map[string]string)
-		for _, tag := range point.Tags { //create the tags
-			tags_map[tag.Key] = tag.Value
-		}
-
-		fields_map := make(map[string]interface{})
-		for _, field := range point.Fields { // create the fields
-			fields_map[field.Key] = field.Value
-		}
-
-		//parse the timestamp (received as an integer contained in a string) into the biggest int available
-		tm, err := strconv.ParseInt(point.Timestamp, 10, 64)
-		if err != nil {
-			panic(err)
-		}
-
-		point_time := time.Unix(tm, 0)
-
-		p := influxdb2.NewPoint(
-			point.Measurement,
-			tags_map,
-			fields_map,
-			point_time)
-
-		// write asynchronously
-		infdb.writeAPI.WritePoint(p)
-	}
-
-	infdb.writeAPI.Flush()
-
-	return nil
+func (s *SmartContract) getValue(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	// Pending
+	return shim.Success(nil)
 }
 
-// This function writes to influx with a chaincode call; defined on the contract. // TESTED
-func (sc *SmartContract) WriteToInflux(ctx contractapi.TransactionContextInterface, dataJson string) error {
-
-	//data pre-processing
-	var pts PointsJson
-	err := json.Unmarshal([]byte(dataJson), &pts)
-	if err != nil {
-		return err
-	}
-
-	return WriteToInflux(pts)
-
-}
-
-// Computes the digest of a PointsJson struct; uses its string representation
-func CalculateDigest(pts string) string { //PENDING
-	return pts
-}
-
-// This function stores new metadata on blockchain // TESTED
-func (sc *SmartContract) WriteBatch(ctx contractapi.TransactionContextInterface, id, fromTimestamp, toTimestamp string, dataJson string) (*Metadata, error) {
-
-	//Check if the device is registered/created; if not, return error, else get its details.
-	deviceInfo, err := ctx.GetStub().GetState(id)
-	if err != nil {
-		return nil, errors.New("Device does not exist!") //err
-	}
-	var dInfo DeviceInfo
-	err = json.Unmarshal([]byte(deviceInfo), &dInfo)
-	if err != nil {
-		return nil, errors.New("DeviceInfo Unmarshal failed!") //err
-	}
-
-	//update device info struct
-	tm, err := strconv.ParseInt(toTimestamp, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	dInfo.LastWriteTimestamp = tm
-
-	//Check if the data batch is empty
-	var pts PointsJson
-	err = json.Unmarshal([]byte(dataJson), &pts)
-	if err != nil {
-		return nil, errors.New("PointsJson unmarshal failed!") //err
-	}
-	isEmpty := false
-	if len(pts.Points) == 0 {
-		isEmpty = true
-	} else {
-		//Since device exists and there are points to write; attempt to write points in influx
-		err = WriteToInflux(pts)
-
-		// if writing to influx fails
-		if err != nil {
-			// trigger an empty entry in blockchain
-			pts.Points = nil
-			isEmpty = true
-		}
-	}
-
-	// If no data in the data batch skip the digest computation,
-	// else set it to false and calculate the digest.
-	digest := ""
-	if !isEmpty {
-		digest = CalculateDigest(pts.String())
-	}
-
-	// Prepare the value to be added to the world state
-	metaEntry := Metadata{Digest: digest, IsEmpty: isEmpty}
-	metaEntryBytes, err := json.Marshal(metaEntry)
-	if err != nil {
-		return nil, errors.New("Metadata marshal failed!") //err
-	}
-
-	// Create the composite key
-	indexName := "deviceID~fromToTimestamp"
-	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, fromTimestamp + `_` + toTimestamp})
-	if err != nil {
-		return nil, errors.New("Creation of composite key failed!") //err
-	}
-
-	//Update the world state
-	//device info
-	deviceInfo, err = json.Marshal(dInfo)
-	if err != nil {
-		return nil, errors.New("World state update: DeviceInfo Marshal failed!") //err
-	}
-	err = ctx.GetStub().PutState(id, deviceInfo)
-	if err != nil {
-		return nil, errors.New("World state update: Updating the world state with DeviceInfo failed!") //err
-	}
-
-	//metadata
-	err = ctx.GetStub().PutState(devMeta, metaEntryBytes)
-	if err != nil {
-		return nil, errors.New("World state update: Updating the world state with metadata failed!") //err
-	}
-
-	return &metaEntry, nil
-
+func (s *SmartContract) getValueHistory(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	// Pending
+	return shim.Success(nil)
 }
 
 func main() {
-
-	chaincode, err := contractapi.NewChaincode(new(SmartContract))
-
+	err := shim.Start(new(SmartContract))
 	if err != nil {
-		fmt.Printf("Error creating chaincode: %s", err.Error())
-		return
+		fmt.Printf("Error when starting chaincode : %s", err)
 	}
-
-	if err := chaincode.Start(); err != nil {
-		fmt.Printf("Error starting chaincode: %s", err.Error())
-	}
-
 }

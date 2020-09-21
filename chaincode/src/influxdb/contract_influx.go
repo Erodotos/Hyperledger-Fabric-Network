@@ -173,6 +173,8 @@ func (sc *SmartContract) ReadFromInflux(ctx contractapi.TransactionContextInterf
 // tmstamp= the timestamp on which the
 func (sc *SmartContract) CreateDevice(ctx contractapi.TransactionContextInterface, id string, location string, tmstamp string) (*DeviceInfo, error) {
 
+
+	_ := ctx.GetStub().GetQueryResultWithPagination()
 	// Create the composite keys
 	indexName := "deviceID~fromToTimestamp"
 	devMeta, err := ctx.GetStub().CreateCompositeKey(indexName, []string{id, "0_0"}) //fromTimestamp_toTimestamp

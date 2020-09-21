@@ -16,8 +16,8 @@ router.post("/util/registerAdmin", async (req, res) => {
 
     // this need to be fixed. Fabric wont accept other than these
     //input data for admin name and password
-    let adminName = "admin"
-    let password = "adminpw"
+    var adminName = "admin"
+    var password = "adminpw"
 
     try {
         // Create a new CA client for interacting with the CA.
