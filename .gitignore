@@ -3,6 +3,12 @@ certificates/
 chaincode/src/influxdb/vendor/*
 chaincode/src/rawOne/vendor/*
 chaincode/src/rawTwo/vendor/*
+chaincode/src/influxdb/go.sum
+chaincode/src/influxdb/go.mod
+chaincode/src/rawOne/go.sum
+chaincode/src/rawOne/go.mod
+chaincode/src/rawTwo/go.sum
+chaincode/src/rawTwo/go.mod
 Org1MSPanchors.tx
 Org2MSPanchors.tx
 influxdb_chaincode.tar.gz

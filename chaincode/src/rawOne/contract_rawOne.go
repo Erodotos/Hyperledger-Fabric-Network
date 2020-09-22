@@ -28,7 +28,7 @@ type TelcoEntry struct {
 
 type RecordHistory struct{
 	TxId 		string		`json:"tx_id"`
-	Timestamp 	string	`json:"timestamp"`
+	Timestamp 	string		`json:"timestamp"`
 	Record 		TelcoEntry	`json:"record"`
 }
 
@@ -41,12 +41,16 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 
 	function, args := stub.GetFunctionAndParameters()
 
-	if function == "newTelcoEntry" {
-		return s.newTelcoEntry(stub, args)
-	} else if function == "updateValue" {
-		return s.updateValue(stub, args)
+	if function == "write" {
+		return s.write(stub, args)
+	} else if function == "queryRecords" {
+		return s.queryRecords(stub, args)
+	} else if function == "queryRecordsWithPagination" {
+		return s.queryRecordsWithPagination(stub, args)
+	} else if function == "getRecordHistory" {
+		return s.getRecordHistory(stub, args)
 	}
-
+	
 	return shim.Success(nil)
 }
 
@@ -209,7 +213,7 @@ func (s *SmartContract) getRecordHistory(stub shim.ChaincodeStubInterface, args 
 		}
 		recordInstance.Record = record
 		
-		historyArray = append(historyArray, value)
+		historyArray = append(historyArray, recordInstance)
 	}
 
 	responseBytes, err := json.Marshal(historyArray)
