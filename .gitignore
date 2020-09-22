@@ -16,5 +16,5 @@ api/node_modules/*
 api/package-lock.json
 api/wallet/*
 contract_influx_chaincode.tar.gz
-contract_rawTwo.tar
-contract_rawOne.tar
+contract_rawTwo.tar.gz
+contract_rawOne.tar.gz

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -25,6 +26,12 @@ type TelcoEntry struct {
 	Timestamp int64   `json:"timestamp"` //col 7, e.g. '201512200045' -> '%Y%m%d%H%M', this format can be used with numeric comparisons
 }
 
+type RecordHistory struct{
+	TxId 		string		`json:"tx_id"`
+	Timestamp 	string	`json:"timestamp"`
+	Record 		TelcoEntry	`json:"record"`
+}
+
 func (s *SmartContract) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.Println("Chaincode instantiated")
 	return shim.Success(nil)
@@ -43,9 +50,8 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	return shim.Success(nil)
 }
 
-func (s *SmartContract) newTelcoEntry(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+func (s *SmartContract) write(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 
-	
 	// ==== Input sanitation ====
 	if len(args) != 5 {
 		return shim.Error("Invalid number of arguments.")
@@ -70,15 +76,8 @@ func (s *SmartContract) newTelcoEntry(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("5th argument must be a numeric string")
 	}
 
-	// ==== Check if Telco record already exists ====
+	// ==== Create record key ====
 	record_id := meas_info + "_" + counter
-	recordAsBytes, err := stub.GetState(record_id)
-	if err != nil {
-		return shim.Error("Failed to get record : " + err.Error())
-	} else if recordAsBytes != nil {
-		fmt.Println("This record_id already exists: " + record_id)
-		return shim.Error("This record already exists: " + record_id)
-	}
 
 	// ==== Create Telco Entry object and marshal to JSON ====
 	record := TelcoEntry{
@@ -89,13 +88,13 @@ func (s *SmartContract) newTelcoEntry(stub shim.ChaincodeStubInterface, args []s
 		Timestamp : timestamp,
 	}
 
-	valueAsBytes, err := json.Marshal(record)
+	recordAsBytes, err := json.Marshal(record)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	// === Save record to world state ===
-	err = stub.PutState(record_id, valueAsBytes)
+	err = stub.PutState(record_id, recordAsBytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -103,79 +102,148 @@ func (s *SmartContract) newTelcoEntry(stub shim.ChaincodeStubInterface, args []s
 	return shim.Success(nil)
 }
 
-func (s *SmartContract) updateValue(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+func (s *SmartContract) queryRecords(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting only 1")
+	}
+
+	queryString := args[0]
+
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return nil, err
+	}
+	defer resultsIterator.Close()
+
+	queryResults, err := constructQueryResponseFromIterator(resultsIterator)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	recordsBytes, err := json.Marshal(queryResults)
+	if err != nil {
+		return shim.Error("Marshal failed!")
+	}
+	return shim.Success(recordsBytes)
+}
+
+func (s *SmartContract) queryRecordsWithPagination(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	//arg[0]=queryString -> to declare meas_info, counter selector
+	//arg[1]=pageSize
+	//arg[2]=bookmark
+	//arg[3]=fromTimestamp -> to declare the time interval
+	//arg[4]=toTimestamp
 
 	// ==== Input sanitation ====
-	// if len(args) != 4 {
-	// 	return shim.Error("Invalid number of arguments.")
-	// }
+	queryString := args[0]
 
-	meas_info :=  strings.ToLower(args[0])
-
-	counter := strings.ToLower(args[1])
-
-	v, err :=  strconv.ParseFloat(args[2],32)
-	if err != nil {
-		return shim.Error("4th argument must be a numeric string")
-	}
-	value := float32(v)
-
-	timestamp, err := strconv.ParseInt(args[3], 10, 64)
-	if err != nil {
-		return shim.Error("5th argument must be a numeric string")
-	}
-
-	// ==== Check if Telco record already exists ====
-	record_id := meas_info + "_" + counter
-	recordAsBytes, err := stub.GetState(record_id)
-	if err != nil {
-		return shim.Error("Failed to get record : " + err.Error())
-	} else if recordAsBytes == nil {
-		fmt.Println("This record_id does not exists: " + record_id)
-		return shim.Error("This record does not exists: " + record_id)
-	}
-
-	fmt.Println("checkpoint 1")
-	// ==== Unmarshal Teclo Entry from JSON ====
-	record := new(TelcoEntry)
-	err = json.Unmarshal(recordAsBytes, &record)
+	pageSize, err := strconv.ParseInt(args[1], 10, 32)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	fmt.Println("checkpoint 2")
+	bookmark := args[2]
 
-	// ==== Update value and timestamp ====
-	
-	record.Value = value
-	record.Timestamp = timestamp
-	
-	recordJSONAsBytes, err := json.Marshal(record)
+	fromTimestamp, err := strconv.ParseInt(args[3], 10, 64)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	fmt.Println("checkpoint 3")
-
-	// === Save updated record to world state ===
-	err = stub.PutState(record_id, recordJSONAsBytes)
+	toTimestamp, err := strconv.ParseInt(args[4], 10, 64)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	fmt.Println("checkpoint 4")
 
-	return shim.Success(nil)
+	resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	records, err := constructQueryResponseFromIterator(resultsIterator)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	recordsBytes, err := json.Marshal(records)
+	if err != nil {
+		return shim.Error("Marshal failed!")
+	}
+
+	return shim.Success(recordsBytes)
 }
 
-func (s *SmartContract) getValue(stub shim.ChaincodeStubInterface, args []string) peer.Response {
-	// Pending
-	return shim.Success(nil)
+func (s *SmartContract) getRecordHistory(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting only 1")
+	}
+
+	record_id := args[0]
+
+	resultsIterator, err := stub.GetHistoryForKey(record_id)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	var historyArray []RecordHistory
+
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		
+		var recordInstance = new(RecordHistory)
+
+		recordInstance.TxId = response.TxId
+		recordInstance.Timestamp = time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String()
+
+		var value TelcoEntry
+		err = json.Unmarshal(response.Value, &value)
+		if err != nil {
+			return nil, "", err
+		}
+		recordInstance.Record = record
+		
+		historyArray = append(historyArray, value)
+	}
+
+	responseBytes, err := json.Marshal(historyArray)
+	if err != nil {
+		return shim.Error("Marshal failed!")
+	}
+
+	return shim.Success(responseBytes)
 }
 
-func (s *SmartContract) getValueHistory(stub shim.ChaincodeStubInterface, args []string) peer.Response {
-	// Pending
-	return shim.Success(nil)
+func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface) (*[]TelcoEntry, error) {
+
+	// Declare TelcoEntry collector
+	var recordsArray []TelcoEntry
+
+	// Get the query results
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, "", err
+		}
+
+		// Get the retrieved record
+		var record TelcoEntry
+		err = json.Unmarshal(queryResponse.Value, &record)
+		if err != nil {
+			return nil, "", err
+		}
+
+		recordsArray = append(recordsArray, record)
+
+	}
+
+	return &entries, nil
 }
 
 func main() {
