@@ -127,9 +127,6 @@ func (t *TelcoData) QueryRangeWithPagination(stub shim.ChaincodeStubInterface, a
 //
 // EXAMPLE queryString: "{"selector":{"$and":[{"meas_info":"dummy_meas_info"},{"batch":{"$elemMatch":{"counter":{"$and":[{"$gt":5},{"$lt":99999999}]}}}}]}}"
 //
-// PENDING: Currently only returns the 1st page of results. Must implement a while-loop to use
-//		the bookmark to retrieve all of them.
-//
 // ========================================================================================================
 func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
@@ -156,15 +153,25 @@ func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterfa
 		return shim.Error(err.Error())
 	}
 
-	resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	defer resultsIterator.Close()
+	var entries []TelcoEntry
+	loop := true
 
-	entries, bookmark, err := constructQueryResponseFromIterator(resultsIterator, responseMetadata, fromTimestamp, toTimestamp)
-	if err != nil {
-		return shim.Error(err.Error())
+	for loop {
+		resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		defer resultsIterator.Close()
+
+		entries, err = constructQueryResponseFromIterator(resultsIterator, fromTimestamp, toTimestamp, entries)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		if responseMetadata.FetchedRecordsCount == 0 {
+			loop = false
+		}
+		bookmark = responseMetadata.Bookmark
 	}
 
 	entriesBytes, err := json.Marshal(entries)
@@ -179,23 +186,20 @@ func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterfa
 // constructQueryResponseFromIterator constructs an array containing query results of interest from
 // a given result iterator
 // ================================================================================================
-func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface, responseMetadata *pb.QueryResponseMetadata, fromTimestamp, toTimestamp int64) (*[]TelcoEntry, string, error) {
-
-	// Declare TelcoEntry collector
-	var entries []TelcoEntry
+func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface, fromTimestamp, toTimestamp int64, entries []TelcoEntry) ([]TelcoEntry, error) {
 
 	// Get the query results
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 
 		// Get the retrieved record
 		var teldata TelcoData
 		err = json.Unmarshal(queryResponse.Value, &teldata)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 
 		// Iterate over returned entries
@@ -207,5 +211,5 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 
 	}
 
-	return &entries, responseMetadata.Bookmark, nil
+	return entries, nil
 }

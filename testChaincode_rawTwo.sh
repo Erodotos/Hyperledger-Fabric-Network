@@ -45,7 +45,7 @@ setGlobalsForPeer1Org2(){
     
 }
 
-WriteBatch(){
+init(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_rawTwo"
     setGlobalsForPeer0Org1
@@ -59,7 +59,23 @@ WriteBatch(){
         --isInit \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "WriteBatch", "Args":["[{\"counter\":1,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":4863,\"timestamp\":201512200045},{\"counter\":6,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":268,\"timestamp\":201512200050}]", "dummy_meas_info", "202109211011"]}'
+        -c '{"function": "WriteBatch", "Args":["[{\"counter\":1,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":4863,\"timestamp\":201512200000},{\"counter\":6,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":268,\"timestamp\":201512201000}]", "dummy_meas_info", "202109211012"]}'
+}
+
+WriteBatch(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawTwo"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "WriteBatch", "Args":["[{\"counter\":1,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":4863,\"timestamp\":201512200000},{\"counter\":6,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":268,\"timestamp\":201512201000}]", "dummy_meas_info", "202109211010"]}'
 }
 
 
@@ -76,7 +92,7 @@ QueryBatchRangeWithPagination(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"Args":["QueryBatchRangeWithPagination", "{\"selector\":{\"$and\":[{\"meas_info\":\"dummy_meas_info\"},{\"batch\":{\"$elemMatch\":{\"counter\":{\"$and\":[{\"$gt\":5},{\"$lt\":99999999}]}}}}]}}","3","", "0", "201512200050"]}'
+        -c '{"Args":["QueryBatchRangeWithPagination", "{\"selector\":{\"$and\":[{\"meas_info\":\"dummy_meas_info\"},{\"batch\":{\"$elemMatch\":{\"counter\":{\"$and\":[{\"$gt\":0},{\"$lt\":99999999}]}}}}]}}","1","", "0", "201512210051"]}'
 
 }
 
@@ -86,5 +102,6 @@ QueryBatchRangeWithPagination(){
 
 #Shim-API: Raw II Chaincode
 
-WriteBatch #must call it twice; 1st with isInit, 2nd without
+#init
+#WriteBatch #must call it twice; 1st with isInit, 2nd without
 #QueryBatchRangeWithPagination
