@@ -62,7 +62,7 @@ init(){
         -c '{"function": "Init","Args": []}'
 }
 
-newTelcoEntry(){
+write(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_rawOne"
     setGlobalsForPeer0Org1
@@ -75,10 +75,10 @@ newTelcoEntry(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "newTelcoEntry","Args": ["50331648", "50331654", "8424bf520db261335d52a0b827a78538", "4863", "201512200045"]}'
+        -c '{"function": "write","Args": ["50331648", "50331654", "8424bf520db261335d52a0b827a78538", "4000", "201512200045"]}'
 }
 
-updateValue(){
+queryRecords(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_rawOne"
     setGlobalsForPeer0Org1
@@ -91,10 +91,27 @@ updateValue(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "updateValue","Args": ["50331648", "50331654", "4000", "201512200047"]}'
+        -c '{"function": "queryRecords","Args": ["{\"selector\":{\"$timestamp\" {\"$gt\" : 0}}"]}'
+}
+
+getRecordHistory(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawOne"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "getRecordHistory","Args": ["50331648_50331654"]}'
 }
 
 # init
-# newTelcoEntry
-# updateValue
+# write
+queryRecords
+# getRecordHistory
 

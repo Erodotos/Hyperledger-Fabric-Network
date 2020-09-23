@@ -56,7 +56,7 @@ vendorGoDependencies(){
 
 CHANNEL_NAME="mychannel"
 CC_RUNTIME_LANGUAGE="golang"
-VERSION="1"
+VERSION="2"
 CC_SRC_PATH="chaincode/src/rawOne"
 CC_NAME="contract_rawOne"
 

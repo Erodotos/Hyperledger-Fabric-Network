@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/peer"
 )
 
-//SmartContract
+//SmartContract object! usually empty
 type SmartContract struct {
 }
 
@@ -50,10 +50,15 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	} else if function == "getRecordHistory" {
 		return s.getRecordHistory(stub, args)
 	}
-	
+
 	return shim.Success(nil)
 }
 
+// args[0] : meas_info 
+// args[1] : counter
+// args[2] : cell_name
+// args[3] : value
+// args[4] : timestamp
 func (s *SmartContract) write(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 
 	// ==== Input sanitation ====
@@ -62,12 +67,13 @@ func (s *SmartContract) write(stub shim.ChaincodeStubInterface, args []string) p
 	}
 
 	meas_info :=  strings.ToLower(args[0])
+
+	counter := strings.ToLower(args[1])
+
 	cell_name :=  strings.ToLower(args[2])
 	if (len(cell_name) != 32){
 		return shim.Error("Cell name must have 32 characters length")
 	}
-
-	counter := strings.ToLower(args[1])
 
 	v, err :=  strconv.ParseFloat(args[3],32)
 	if err != nil {
@@ -106,6 +112,13 @@ func (s *SmartContract) write(stub shim.ChaincodeStubInterface, args []string) p
 	return shim.Success(nil)
 }
 
+// eg query string {"selector":{"$timestamp" {"$gt" : 0}}
+// this query retrieves all records with timestamp greater than 0
+// args[0] : queryString 
+
+// Need debugging
+// Error: endorsement failure during invoke. response: status:500 message:
+// "GET_QUERY_RESULT failed: transaction ID: 9140274f4bd77dc877871f8dfca8eedd9293ad1694c31b6dbd9cfaafc628d124: invalid character '{' after object key" 
 func (s *SmartContract) queryRecords(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 
 	if len(args) < 1 {
@@ -116,29 +129,33 @@ func (s *SmartContract) queryRecords(stub shim.ChaincodeStubInterface, args []st
 
 	resultsIterator, err := stub.GetQueryResult(queryString)
 	if err != nil {
-		return nil, err
+		return shim.Error(err.Error())
 	}
 	defer resultsIterator.Close()
 
-	queryResults, err := constructQueryResponseFromIterator(resultsIterator)
+	var records []TelcoEntry
+
+	records, err = constructQueryResponseFromIterator(resultsIterator,records)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	recordsBytes, err := json.Marshal(queryResults)
+	recordsBytes, err := json.Marshal(records)
 	if err != nil {
 		return shim.Error("Marshal failed!")
 	}
+
+	fmt.Println(recordsBytes)
+
 	return shim.Success(recordsBytes)
 }
 
+// eg query string {"selector":{"$timestamp" {"$gt" : 0}}
+// this query retrieves all records with timestamp greater than 0
+// args[0] : queryString 
+// args[1] : pageSize
+// args[2] : bookmark
 func (s *SmartContract) queryRecordsWithPagination(stub shim.ChaincodeStubInterface, args []string) peer.Response {
-	//arg[0]=queryString -> to declare meas_info, counter selector
-	//arg[1]=pageSize
-	//arg[2]=bookmark
-	//arg[3]=fromTimestamp -> to declare the time interval
-	//arg[4]=toTimestamp
-
 	// ==== Input sanitation ====
 	queryString := args[0]
 
@@ -149,36 +166,39 @@ func (s *SmartContract) queryRecordsWithPagination(stub shim.ChaincodeStubInterf
 
 	bookmark := args[2]
 
-	fromTimestamp, err := strconv.ParseInt(args[3], 10, 64)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
+	var records []TelcoEntry
+	loop := true
 
-	toTimestamp, err := strconv.ParseInt(args[4], 10, 64)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
+	for loop {
+		resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		defer resultsIterator.Close()
 
+		records, err = constructQueryResponseFromIterator(resultsIterator, records)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
 
-	resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	defer resultsIterator.Close()
+		if responseMetadata.FetchedRecordsCount == 0 {
+			loop = false
+		}
 
-	records, err := constructQueryResponseFromIterator(resultsIterator)
-	if err != nil {
-		return shim.Error(err.Error())
+		bookmark = responseMetadata.Bookmark
 	}
 
 	recordsBytes, err := json.Marshal(records)
 	if err != nil {
 		return shim.Error("Marshal failed!")
 	}
+	
+	fmt.Println(recordsBytes)
 
 	return shim.Success(recordsBytes)
 }
 
+//args[0] : record_id
 func (s *SmartContract) getRecordHistory(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	
 	if len(args) != 1 {
@@ -201,7 +221,7 @@ func (s *SmartContract) getRecordHistory(stub shim.ChaincodeStubInterface, args 
 			return shim.Error(err.Error())
 		}
 		
-		var recordInstance = new(RecordHistory)
+		var recordInstance RecordHistory
 
 		recordInstance.TxId = response.TxId
 		recordInstance.Timestamp = time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String()
@@ -209,9 +229,9 @@ func (s *SmartContract) getRecordHistory(stub shim.ChaincodeStubInterface, args 
 		var value TelcoEntry
 		err = json.Unmarshal(response.Value, &value)
 		if err != nil {
-			return nil, "", err
+			return shim.Error(err.Error())
 		}
-		recordInstance.Record = record
+		recordInstance.Record = value
 		
 		historyArray = append(historyArray, recordInstance)
 	}
@@ -221,33 +241,33 @@ func (s *SmartContract) getRecordHistory(stub shim.ChaincodeStubInterface, args 
 		return shim.Error("Marshal failed!")
 	}
 
+	fmt.Println(responseBytes)
+
 	return shim.Success(responseBytes)
 }
 
-func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface) (*[]TelcoEntry, error) {
-
-	// Declare TelcoEntry collector
-	var recordsArray []TelcoEntry
+// this is an utility function
+func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface, recordsArray []TelcoEntry) ([]TelcoEntry, error) {
 
 	// Get the query results
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 
 		// Get the retrieved record
 		var record TelcoEntry
 		err = json.Unmarshal(queryResponse.Value, &record)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 
 		recordsArray = append(recordsArray, record)
 
 	}
 
-	return &entries, nil
+	return recordsArray, nil
 }
 
 func main() {
