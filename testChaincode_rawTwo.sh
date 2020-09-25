@@ -78,7 +78,6 @@ WriteBatch(){
         -c '{"function": "WriteBatch", "Args":["[{\"value\":1234,\"timestamp\":201512200000},{\"value\":345,\"timestamp\":201512201000}]", "test_info", "1", "202109211010"]}'
 }
 
-
 QueryBatchRangeWithPagination(){
     CHANNEL_NAME=mychannel
     CC_NAME="contract_rawTwo"
@@ -97,12 +96,80 @@ QueryBatchRangeWithPagination(){
 
 }
 
+WriteBatch2(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawTwo"
+    setGlobalsForPeer0Org1
 
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "WriteBatch2", "Args":["[{\"value\":1234,\"timestamp\":201512199000},{\"value\":345,\"timestamp\":201512200001},{\"value\":345,\"timestamp\":201512200002},{\"value\":345,\"timestamp\":201512200003}]", "test_info", "1", "201512199000"]}'
+}
 
+QueryBatchRange2(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawTwo"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"Args":["QueryBatchRange2", "test_info", "1", "000000000000", "999999999999", "1",""]}'
+        #gets all the batches for the meas_info-counter pair
+
+}
+
+WriteBatchComposite(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawTwo"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"function": "WriteBatchComposite", "Args":["[{\"value\":1234,\"timestamp\":201512199001},{\"value\":345,\"timestamp\":201512200001},{\"value\":345,\"timestamp\":201512200002},{\"value\":345,\"timestamp\":201512200003}]", "test_info", "1", "201512199001"]}'
+}
+
+QueryBatchRangeComposite(){
+    CHANNEL_NAME=mychannel
+    CC_NAME="contract_rawTwo"
+    setGlobalsForPeer0Org1
+
+    peer chaincode invoke -o localhost:7050 \
+        --ordererTLSHostnameOverride orderer.example.com \
+        --tls $CORE_PEER_TLS_ENABLED \
+        --cafile $ORDERER_CA \
+        -C $CHANNEL_NAME \
+        -n ${CC_NAME}  \
+        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+        -c '{"Args":["QueryBatchRangeComposite", "test_info", "1", "000000000000", "999999999999", "1",""]}'
+
+}
 
 
 #Shim-API: Raw II Chaincode
 
 #init
-#WriteBatch #must call it twice; 1st with isInit, 2nd without
-QueryBatchRangeWithPagination
+#WriteBatch
+#QueryBatchRangeWithPagination
+#WriteBatch2    
+#QueryBatchRange2
+#WriteBatchComposite
+#QueryBatchRangeComposite

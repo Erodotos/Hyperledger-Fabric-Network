@@ -49,6 +49,14 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.WriteBatch(stub, args)
 	} else if function == "QueryBatchRangeWithPagination" {
 		return t.QueryBatchRangeWithPagination(stub, args)
+	} else if function == "WriteBatch2" {
+		return t.WriteBatch2(stub, args)
+	} else if function == "QueryBatchRange2" {
+		return t.QueryBatchRange2(stub, args)
+	} else if function == "WriteBatchComposite" {
+		return t.WriteBatchComposite(stub, args)
+	} else if function == "QueryBatchRangeComposite" {
+		return t.QueryBatchRangeComposite(stub, args)
 	}
 
 	fmt.Println("invoke did not find func: " + function) //error
@@ -57,12 +65,12 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 // ===========================================================================================
 // Writes the received data batch in the ledger.
-// The data in the batch must refer to the "meas_info".
+// The data in the batch must refer to the same "meas_info" and "counter".
 // Arguments:
 // 		args[0] -> a JSON with the data; must be in the form of a TelcoEntry struct.
 //		args[1] -> the "meas_info" of the received data
 //		args[2] -> the "counter" of the received data
-//	 	args[3] -> the timestamp on which the chaincode API was invoked
+//	 	args[3] -> the timestamp on which the chaincode API was invoked OR the minimum timestamp in the batch
 // JSON string/args[0] example:
 //[
 //	{
@@ -191,4 +199,154 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 	}
 
 	return entries, nil
+}
+
+// ===========================================================================================
+// Writes the received data batch in the ledger.
+// Arguments:
+// 		args[0] -> a JSON with the data; must be in the form of a TelcoEntry struct.
+//		args[1] -> the "meas_info" of the received data
+//		args[2] -> the "counter" of the received data
+//	 	args[3] -> minimum timestamp in batch
+// JSON string/args[0] example:
+//[
+//	{
+//		"value":4863,
+//		"timestamp":201512200045
+//	}
+//]
+// ===========================================================================================
+func (t *TelcoData) WriteBatch2(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	// Cast the data into the desired format
+	var batch TelcoData
+	err := json.Unmarshal([]byte(args[0]), &batch.Batch)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	// Cast the struct in []byte format
+	batchBytes, err := json.Marshal(batch)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutState(args[1]+`_`+args[2]+`_`+addPadding(args[3]), batchBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(batchBytes)
+}
+
+// =======================================================================================================
+// QueryBatchRange2 returns the TelcoEntries that correspond to the "meas_info", "counter" and
+// [fromTimestamp, toTimestamp) of choice.
+//
+//args[0]=meas_info
+//args[1]=counter
+//args[2]=fromTimestamp
+//args[3]=toTimestamp
+//args[4]=pageSize
+//args[5]=bookmark
+// ========================================================================================================
+func (t *TelcoData) QueryBatchRange2(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	// Cast accordingly
+	//return type of ParseInt is int64... but we need int32
+	pageSize, err := strconv.ParseInt(args[4], 10, 32)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	bookmark := args[5]
+	fromTimestamp, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	toTimestamp, err := strconv.ParseInt(args[3], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	startKey := args[0] + `_` + args[1] + `_` + addPadding(args[2])
+	endKey := args[0] + `_` + args[1] + `_` + addPadding(args[3])
+
+	var entries []TelcoEntry
+	loop := true
+
+	for loop {
+		resultsIterator, responseMetadata, err := stub.GetStateByRangeWithPagination(startKey, endKey, int32(pageSize), bookmark)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		defer resultsIterator.Close()
+
+		entries, err = constructQueryResponseFromIterator(resultsIterator, fromTimestamp, toTimestamp, entries)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		if responseMetadata.FetchedRecordsCount == 0 {
+			loop = false
+		}
+		bookmark = responseMetadata.Bookmark
+	}
+
+	entriesBytes, err := json.Marshal(entries)
+	if err != nil {
+		return shim.Error("Marshal failed!")
+	}
+
+	return shim.Success(entriesBytes)
+}
+
+// ===========================================================================================
+// Same as WriteBatch2
+// NOTE: CouchDB independed
+// ===========================================================================================
+func (t *TelcoData) WriteBatchComposite(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	// Cast the data into the desired format
+	var batch TelcoData
+	err := json.Unmarshal([]byte(args[0]), &batch.Batch)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Cast the struct in []byte format
+	batchBytes, err := json.Marshal(batch)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Create composite key
+	compo := "measInfo~counter~fromTimestamp"
+	compoKey, err := stub.CreateCompositeKey(compo, []string{args[1], args[2], args[3]})
+	if err != nil {
+		return shim.Error("Creation of composite key failed!")
+	}
+
+	// Save the batch to world state.
+	err = stub.PutState(compoKey, batchBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(batchBytes)
+}
+
+// ===========================================================================================
+// Same as QueryBatchRange2.
+// NOTE: CouchDB independed
+// =========================================================================================== PENDING (IMPLEMENTATION)
+func (t *TelcoData) QueryBatchRangeComposite(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	return shim.Success([]byte{0x00})
+}
+
+// ===========================================================================
+// Adds padding to the received string (zeroes to the front).
+// String length yet undecided...
+// =========================================================================== // PENDING (IMPLEMENTATION)
+func addPadding(str string) string {
+	return str
 }
