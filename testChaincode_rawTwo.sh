@@ -75,7 +75,7 @@ WriteBatch(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "WriteBatch", "Args":["[{\"counter\":1,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":4863,\"timestamp\":201512200000},{\"counter\":6,\"cell_name\":\"8424bf520db261335d52a0b827a78538\",\"value\":268,\"timestamp\":201512201000}]", "dummy_meas_info", "202109211010"]}'
+        -c '{"function": "WriteBatch", "Args":["[{\"value\":1234,\"timestamp\":201512200000},{\"value\":345,\"timestamp\":201512201000}]", "test_info", "1", "202109211010"]}'
 }
 
 
@@ -92,7 +92,8 @@ QueryBatchRangeWithPagination(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"Args":["QueryBatchRangeWithPagination", "{\"selector\":{\"$and\":[{\"meas_info\":\"dummy_meas_info\"},{\"batch\":{\"$elemMatch\":{\"counter\":{\"$and\":[{\"$gt\":0},{\"$lt\":99999999}]}}}}]}}","1","", "0", "201512210051"]}'
+        -c '{"Args":["QueryBatchRangeWithPagination", "{\"selector\":{\"_id\":{\"$regex\":\"^test_info_1\"}}}","1","", "0", "201512200001"]}'
+        
 
 }
 
@@ -104,4 +105,4 @@ QueryBatchRangeWithPagination(){
 
 #init
 #WriteBatch #must call it twice; 1st with isInit, 2nd without
-#QueryBatchRangeWithPagination
+QueryBatchRangeWithPagination
