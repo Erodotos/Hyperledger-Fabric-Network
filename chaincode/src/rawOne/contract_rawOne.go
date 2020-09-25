@@ -32,11 +32,13 @@ type RecordHistory struct{
 	Record 		TelcoEntry	`json:"record"`
 }
 
+// instantiates smart contract
 func (s *SmartContract) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	fmt.Println("Chaincode instantiated")
 	return shim.Success(nil)
 }
 
+// this functions is the chaincode entry point 
 func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 
 	function, args := stub.GetFunctionAndParameters()
@@ -121,6 +123,7 @@ func (s *SmartContract) write(stub shim.ChaincodeStubInterface, args []string) p
 // "GET_QUERY_RESULT failed: transaction ID: 9140274f4bd77dc877871f8dfca8eedd9293ad1694c31b6dbd9cfaafc628d124: invalid character '{' after object key" 
 func (s *SmartContract) queryRecords(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 
+	fmt.Println("I am in")
 	if len(args) < 1 {
 		return shim.Error("Incorrect number of arguments. Expecting only 1")
 	}
@@ -170,6 +173,7 @@ func (s *SmartContract) queryRecordsWithPagination(stub shim.ChaincodeStubInterf
 	loop := true
 
 	for loop {
+
 		resultsIterator, responseMetadata, err := stub.GetQueryResultWithPagination(queryString, int32(pageSize), bookmark)
 		if err != nil {
 			return shim.Error(err.Error())
@@ -186,6 +190,8 @@ func (s *SmartContract) queryRecordsWithPagination(stub shim.ChaincodeStubInterf
 		}
 
 		bookmark = responseMetadata.Bookmark
+
+		fmt.Println("paginated results")
 	}
 
 	recordsBytes, err := json.Marshal(records)

@@ -15,7 +15,6 @@ router.post('/invoke/chaincodes/:chaincode/', async function (req, res) {
     var fnc = req.body.fnc
     var args = req.body.args
     var user = req.body.user
-    var orgName = req.body.orgname
     var channel = "mychannel"
     var chaincode = req.params.chaincode
     
@@ -44,11 +43,10 @@ router.post('/invoke/chaincodes/:chaincode/', async function (req, res) {
 
         if (fnc == "Init"){
             await contract.submitTransaction('Init');
-        } else if( fnc == "newTelcoEntry"){
-            await contract.submitTransaction('newTelcoEntry', );
+        } else if( fnc == "write"){
+            await contract.submitTransaction('write', args.meas_info, args.counter, args.cell_name, args.value, args.timestamp);
         }
 
-        await contract.submitTransaction('createCar', req.body.carid, req.body.make, req.body.model, req.body.colour, req.body.owner);
         console.log('Transaction has been submitted');
         res.send('Transaction has been submitted');
 
@@ -60,3 +58,6 @@ router.post('/invoke/chaincodes/:chaincode/', async function (req, res) {
         process.exit(1);
     }
 });    
+
+
+module.exports = router;
