@@ -11,16 +11,13 @@ import (
 
 // To store the data in the ledger
 type TelcoEntry struct {
-	Counter   int     `json:"counter"`   //col 2
-	CellName  string  `json:"cell_name"` //col 5
 	Value     float32 `json:"value"`     //col 6
 	Timestamp int64   `json:"timestamp"` //col 7, e.g. '201512200045' -> '%Y%m%d%H%M', this format can be used with numeric comparisons
 }
 
 // To add helpful information to the data
 type TelcoData struct {
-	MeasInfo string       `json:"meas_info"` //col 1
-	Batch    []TelcoEntry `json:"batch"`
+	Batch []TelcoEntry `json:"batch"`
 }
 
 // =========
@@ -64,19 +61,12 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 // Arguments:
 // 		args[0] -> a JSON with the data; must be in the form of a TelcoEntry struct.
 //		args[1] -> the "meas_info" of the received data
-//	 	args[2] -> the timestamp on which the chaincode API was invoked
+//		args[2] -> the "counter" of the received data
+//	 	args[3] -> the timestamp on which the chaincode API was invoked
 // JSON string/args[0] example:
 //[
 //	{
-//		"counter":50331654,
-//		"cell_name":"8424bf520db261335d52a0b827a78538",
 //		"value":4863,
-//		"timestamp":201512200045
-//	},
-//	{
-//		"counter":50331655,
-//		"cell_name":"8424bf520db261335d52a0b827a78538",
-//		"value":268,
 //		"timestamp":201512200045
 //	}
 //]
@@ -90,9 +80,6 @@ func (t *TelcoData) WriteBatch(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error(err.Error())
 	}
 
-	// Add their "meas_info" information
-	batch.MeasInfo = args[1]
-
 	// Cast the struct in []byte format
 	batchBytes, err := json.Marshal(batch)
 	if err != nil {
@@ -100,7 +87,7 @@ func (t *TelcoData) WriteBatch(stub shim.ChaincodeStubInterface, args []string) 
 	}
 
 	// Save the batch to world state.
-	err = stub.PutState(args[1]+`_`+args[2], batchBytes)
+	err = stub.PutState(args[1]+`_`+args[2]+`_`+args[3], batchBytes)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -108,24 +95,16 @@ func (t *TelcoData) WriteBatch(stub shim.ChaincodeStubInterface, args []string) 
 	return shim.Success(batchBytes)
 }
 
-// Retrieves the data_batches that contain entries of interest; may return more data than requested.
-//
-// PENDING: Drop the unnecessary data
-//
-// Uses couchDB's $elemMatch much queries to retrieve the ledger entries of interest.
-func (t *TelcoData) QueryRangeWithPagination(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
-	return shim.Success([]byte{0x00})
-}
-
 // =======================================================================================================
 // QueryBatchRangeWithPagination executes the passed in query string with
 // pagination info. Result set is built and returned as a TelcoEntry array containing the results.
 //
-// NOTE: The queryString can be use to retrieve any combination of meas_info(s) and couter(s).
-// 		 The fromTimestamp and toTimestamp are used to bound the results returned, and cannot be ommited.
+// NOTE: (1) The queryString can be used to retrieve any set of ledger entries, on which the measurements will
+//		     be extracted from according to the time-bounds provided.
+// 		 (2) The fromTimestamp and toTimestamp are used to bound the results returned, and cannot be ommited.
+//		 (3) The data entries in a single data batch have the same "meas_info" and "counter".
 //
-// EXAMPLE queryString: "{"selector":{"$and":[{"meas_info":"dummy_meas_info"},{"batch":{"$elemMatch":{"counter":{"$and":[{"$gt":5},{"$lt":99999999}]}}}}]}}"
+// EXAMPLE queryString: "{\"selector\":{\"_id\":{\"$regex\":\"^test_meas_info_counter1\"}}}"
 //
 // ========================================================================================================
 func (t *TelcoData) QueryBatchRangeWithPagination(stub shim.ChaincodeStubInterface, args []string) pb.Response {
