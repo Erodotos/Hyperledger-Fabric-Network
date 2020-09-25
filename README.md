@@ -1,6 +1,6 @@
 # Hyperledger Fabric Test Network
 
-In this repository you can find instructions on how to build a simple Hyperledger Fabric Network. This is a sample network with 2 Organizations. Each Organization is consist of 2 peers. The following image illustrates the network formation. 
+In this repository you can find instructions on how to build a simple Hyperledger Fabric Network. The network consists of 2 Organizations. Each Organization has 2 peers. The following image illustrates the network formation. 
 
 ![Test Network](https://imgur.com/XfyRKTd.png)
 
@@ -13,13 +13,13 @@ In this repository you can find instructions on how to build a simple Hyperledge
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+Follow the instructions below to setup a test network on your machine
 
 NOTE : The following instractions have been tested on an Ubuntu 18.04.4 LTS Virtual Machine with 4 cores, 8GB RAM and 80GB secondary storage. 
 
 ### Prerequisites
 
-The following have to be installed in order to make Hyperledger Fabric work : 
+The following tools have to be installed to make Hyperledger Fabric Network operational : 
 
 * [Git](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-git)
 * [cURL](https://github.com/Erodotos/Hyperledger-Fabric-Network/blob/master/README.md#install-curl)
@@ -89,7 +89,7 @@ $ sudo chmod +x /usr/local/bin/docker-compose
 
 #### Install Go
 
-Download the Go language binary archive file using following link.(In this guide we use go version 1.13.8
+Download the Go language binary archive.(In this guide we use go version 1.13.8) 
 
 ```
 $ wget https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
@@ -97,7 +97,7 @@ $ sudo tar -xvf go1.13.8.linux-amd64.tar.gz
 $ sudo mv go /usr/local
 ```
 
-Now you need to setup Go language environment variables. Commonly you need to set 3 environment variables as GOROOT, GOPATH and PATH. **GOROOT** is the location where Go package is installed on your system. **GOPATH** is the location of your work directory. **PATH** variable is used to access go binary system wide.
+Now you need to setup Go language environment variables. Commonly you need to set 3 environment variables as GOROOT, GOPATH and PATH. **GOROOT** is the location where Go package is installed on your system. **GOPATH** is the location of your work directory. **PATH** variable is used to access go binary system-wide.
 
 ```
 $ export GOROOT=/usr/local/go
@@ -109,7 +109,7 @@ All the above environment will be set for your current session only. **To make i
 
 #### Install Node.js
 
-This guide use Node.js version 8.9.4. For this reason we are going to install the specific version using NVM (Node Version Manager)
+This guide use Node.js version 8.9.4. For this reason we are going to install the specific version using NVM (Node Version Manager). Though, for  API usage node version 8.13.0 is required
 
 Close and reopen your terminal to start using nvm.
 
