@@ -96,39 +96,6 @@ QueryBatchRangeWithPagination(){
 
 }
 
-WriteBatch2(){
-    CHANNEL_NAME=mychannel
-    CC_NAME="contract_rawTwo"
-    setGlobalsForPeer0Org1
-
-    peer chaincode invoke -o localhost:7050 \
-        --ordererTLSHostnameOverride orderer.example.com \
-        --tls $CORE_PEER_TLS_ENABLED \
-        --cafile $ORDERER_CA \
-        -C $CHANNEL_NAME \
-        -n ${CC_NAME}  \
-        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
-        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "WriteBatch2", "Args":["[{\"value\":1234,\"timestamp\":201512199000},{\"value\":345,\"timestamp\":201512200001},{\"value\":345,\"timestamp\":201512200002},{\"value\":345,\"timestamp\":201512200003}]", "test_info", "1", "201512199000"]}'
-}
-
-QueryBatchRange2(){
-    CHANNEL_NAME=mychannel
-    CC_NAME="contract_rawTwo"
-    setGlobalsForPeer0Org1
-
-    peer chaincode invoke -o localhost:7050 \
-        --ordererTLSHostnameOverride orderer.example.com \
-        --tls $CORE_PEER_TLS_ENABLED \
-        --cafile $ORDERER_CA \
-        -C $CHANNEL_NAME \
-        -n ${CC_NAME}  \
-        --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
-        --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"Args":["QueryBatchRange2", "test_info", "1", "000000000000", "999999999999", "1",""]}'
-        #gets all the batches for the meas_info-counter pair
-
-}
 
 WriteBatchComposite(){
     CHANNEL_NAME=mychannel
@@ -143,7 +110,9 @@ WriteBatchComposite(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"function": "WriteBatchComposite", "Args":["[{\"value\":1234,\"timestamp\":201512199001},{\"value\":345,\"timestamp\":201512200001},{\"value\":345,\"timestamp\":201512200002},{\"value\":345,\"timestamp\":201512200003}]", "test_info", "1", "201512199001"]}'
+        -c '{"function": "WriteBatchComposite", "Args":["[{\"value\":345,\"timestamp\":201512200010},{\"value\":345,\"timestamp\":201512200011},{\"value\":345,\"timestamp\":201512200012},{\"value\":345,\"timestamp\":201512200013},{\"value\":1234,\"timestamp\":201512200014}]", "test_info", "1", "201512200010"]}'
+        #-c '{"function": "WriteBatchComposite", "Args":["[{\"value\":1234,\"timestamp\":201512200000},{\"value\":345,\"timestamp\":201512200001},{\"value\":345,\"timestamp\":201512200002},{\"value\":345,\"timestamp\":201512200003},{\"value\":345,\"timestamp\":201512200004}]", "test_info", "1", "201512200000"]}'
+        #-c '{"function": "WriteBatchComposite", "Args":["[{\"value\":1234,\"timestamp\":201512200005},{\"value\":345,\"timestamp\":201512200006},{\"value\":345,\"timestamp\":201512200007},{\"value\":345,\"timestamp\":201512200008},{\"value\":345,\"timestamp\":201512200009}]", "test_info", "1", "201512200005"]}'
 }
 
 QueryBatchRangeComposite(){
@@ -159,7 +128,7 @@ QueryBatchRangeComposite(){
         -n ${CC_NAME}  \
         --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
         --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-        -c '{"Args":["QueryBatchRangeComposite", "test_info", "1", "000000000000", "999999999999", "1",""]}'
+        -c '{"Args":["QueryBatchRangeComposite", "test_info", "1", "201512200003", "201512200012", "5"]}'
 
 }
 
@@ -169,7 +138,5 @@ QueryBatchRangeComposite(){
 #init
 #WriteBatch
 #QueryBatchRangeWithPagination
-#WriteBatch2    
-#QueryBatchRange2
 #WriteBatchComposite
 #QueryBatchRangeComposite
