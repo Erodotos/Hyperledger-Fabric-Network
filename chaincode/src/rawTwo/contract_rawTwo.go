@@ -49,6 +49,10 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.WriteBatch(stub, args)
 	} else if function == "QueryBatchRangeWithPagination" {
 		return t.QueryBatchRangeWithPagination(stub, args)
+	} else if function == "WriteBatchComposite" {
+		return t.WriteBatchComposite(stub, args)
+	} else if function == "QueryBatchRangeComposite" {
+		return t.QueryBatchRangeComposite(stub, args)
 	}
 
 	fmt.Println("invoke did not find func: " + function) //error
@@ -57,12 +61,12 @@ func (t *TelcoData) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 // ===========================================================================================
 // Writes the received data batch in the ledger.
-// The data in the batch must refer to the "meas_info".
+// The data in the batch must refer to the same "meas_info" and "counter".
 // Arguments:
 // 		args[0] -> a JSON with the data; must be in the form of a TelcoEntry struct.
 //		args[1] -> the "meas_info" of the received data
 //		args[2] -> the "counter" of the received data
-//	 	args[3] -> the timestamp on which the chaincode API was invoked
+//	 	args[3] -> the timestamp on which the chaincode API was invoked OR the minimum timestamp in the batch
 // JSON string/args[0] example:
 //[
 //	{
@@ -191,4 +195,153 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 	}
 
 	return entries, nil
+}
+
+// ===========================================================================================
+// Writes the received data batch in the ledger.
+// Arguments:
+// 		args[0] -> a JSON with the data; must be in the form of a TelcoEntry struct.
+//		args[1] -> the "meas_info" of the received data
+//		args[2] -> the "counter" of the received data
+//	 	args[3] -> minimum timestamp in batch
+// JSON string/args[0] example:
+//[
+//	{
+//		"value":4863,
+//		"timestamp":201512200045
+//	}
+//]
+// NOTE: CouchDB independed
+// ===========================================================================================
+func (t *TelcoData) WriteBatchComposite(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	// Cast the data into the desired format
+	var batch TelcoData
+	err := json.Unmarshal([]byte(args[0]), &batch.Batch)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Cast the struct in []byte format
+	batchBytes, err := json.Marshal(batch)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Create composite key
+	compo := "measInfo~counter~fromTimestamp"
+	compoKey, err := stub.CreateCompositeKey(compo, []string{args[1], args[2], args[3]})
+	if err != nil {
+		return shim.Error("Creation of composite key failed!")
+	}
+
+	// Save the batch to world state.
+	err = stub.PutState(compoKey, batchBytes)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success(batchBytes)
+}
+
+// ===========================================================================================
+// QueryBatchRangeComposite returns the TelcoEntries that correspond to the "meas_info", "counter" and
+// [fromTimestamp, toTimestamp) of choice.
+//
+//args[0]=meas_info
+//args[1]=counter
+//args[2]=fromTimestamp
+//args[3]=toTimestamp
+//args[4]=batchSize -> fixed sized data batches
+//
+// NOTE: CouchDB independed
+// ===========================================================================================
+func (t *TelcoData) QueryBatchRangeComposite(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	var entries []TelcoEntry
+
+	// Fetch ledger entries for specified meas_info and counter
+	entryIterator, err := stub.GetStateByPartialCompositeKey("measInfo~counter~fromTimestamp", []string{args[0], args[1]})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Casts
+	fromTimestamp1, err := strconv.ParseInt(args[2], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	toTimestamp1, err := strconv.ParseInt(args[3], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	batchSize, err := strconv.ParseInt(args[4], 10, 64)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	fromTimestamp2 := computeKeyDown(fromTimestamp1, batchSize)
+	toTimestamp2 := computeKeyUp(toTimestamp1, batchSize)
+
+	// Extract data from the relevant ledger entries
+	var i int
+	for i = 0; entryIterator.HasNext(); i++ {
+
+		// Get the ledger entry
+		entry, err := entryIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		// Get the entry's key data
+		_, compositeKeyParts, err := stub.SplitCompositeKey(entry.Key)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		// Check if entry is within desired time interval
+		fromTm, err := strconv.ParseInt(compositeKeyParts[2], 10, 64)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		if fromTm < fromTimestamp2 || fromTm >= toTimestamp2 {
+			continue
+		}
+
+		// Extract the data batch
+		var telData TelcoData
+		err = json.Unmarshal(entry.GetValue(), &telData)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		// Extract only the relevant entries from the data batch
+		for _, e := range telData.Batch {
+			if e.Timestamp >= fromTimestamp1 && e.Timestamp < toTimestamp1 {
+				entries = append(entries, e)
+			}
+		}
+
+	}
+
+	// Cast to required return data type
+	entriesBytes, err := json.Marshal(entries)
+	if err != nil {
+		return shim.Error("Marshal failed!")
+	}
+
+	return shim.Success(entriesBytes)
+}
+
+// ===========================================================================
+// Maps a received key X to the biggest ledger key K, where K<=X
+// ===========================================================================
+func computeKeyDown(key int64, batchSize int64) int64 {
+	return key - (key % batchSize)
+}
+
+// ===========================================================================
+// Maps a received key X to the smallest ledger key K, where X<=K
+// ===========================================================================
+func computeKeyUp(key int64, batchSize int64) int64 {
+	return key + batchSize - (key % batchSize)
 }
