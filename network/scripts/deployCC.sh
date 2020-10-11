@@ -9,9 +9,9 @@ FABRIC_CFG_PATH=$PWD/config/
 
 CHANNEL_NAME=${1:-"mychannel"}
 CC_NAME=${2:-"rawOne"}
-CC_SRC_PATH=${3:-"/chaincode/src/rawOne/"}
-CC_SRC_LANGUAGE="golang"
-CC_VERSION=${4:-"1.0"}
+CC_SRC_LANGUAGE=${3:-"golang"}
+CC_SRC_PATH=${4:-"/chaincode/src/rawOne/"}
+CC_VERSION=${5:-"1.0"}
 
 # do some language specific preparation to the chaincode before packaging
 vendorGoDependencies(){
@@ -171,7 +171,7 @@ chaincodeInvokeInit() {
 
 ## package the chaincode
 infoln "Packaging chaincode on Org1 Peer0"
-packageChaincode 1 0
+packageChaincode 1 0 
 
 ## Install chaincode on peer0.org1, peer1.org1 and peer0.org2, peer1.org2
 infoln "Installing chaincode on Org1"

@@ -22,4 +22,48 @@ write() {
     
 }
 
-write
+
+queryRecords(){
+    
+    peer chaincode invoke -o localhost:7050 \
+    --ordererTLSHostnameOverride orderer.example.com \
+    --tls \
+    --cafile $ORDERER_CA \
+    -C $CHANNEL_NAME \
+    -n ${CC_NAME}  \
+    --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+    -c '{"function": "queryRecords","Args": ["{\"selector\":{\"_id\" : {\"$eq\" : \"50331648_50331662\"}}}"]}'
+}
+
+queryRecordsWithPagination(){
+    
+    peer chaincode invoke -o localhost:7050 \
+    --ordererTLSHostnameOverride orderer.example.com \
+    --tls $CORE_PEER_TLS_ENABLED \
+    --cafile $ORDERER_CA \
+    -C $CHANNEL_NAME \
+    -n ${CC_NAME}  \
+    --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+    -c '{"function": "queryRecordsWithPagination","Args": ["{\"selector\":{\"timestamp\" : {\"$gt\" : 0}}}", "3", ""]}'
+}
+
+
+getRecordHistory(){
+    echo "history"
+    peer chaincode invoke -o localhost:7050 \
+    --ordererTLSHostnameOverride orderer.example.com \
+    --tls $CORE_PEER_TLS_ENABLED \
+    --cafile $ORDERER_CA \
+    -C $CHANNEL_NAME \
+    -n ${CC_NAME}  \
+    --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
+    --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
+    -c '{"function": "getRecordHistory","Args": ["50331648_50331662"]}'
+}
+
+# write
+queryRecords
+# queryRecordsWithPagination
+# getRecordHistory

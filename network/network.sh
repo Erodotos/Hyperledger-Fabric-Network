@@ -131,7 +131,7 @@ function createChannel() {
 ## Call the script to install and instantiate a chaincode on the channel
 function deployCC() {
     
-    scripts/deployCC.sh $CHANNEL_NAME $CC_NAME $CC_SRC_PATH $CC_VERSION
+    scripts/deployCC.sh $CHANNEL_NAME $CC_NAME $CC_SRC_LANGUAGE $CC_SRC_PATH $CC_VERSION
     
     if [ $? -ne 0 ]; then
         fatalln "Deploying chaincode failed"
@@ -160,6 +160,8 @@ COMPOSE_FILE_BASE=docker/docker-compose.yaml
 COMPOSE_FILE_COUCH=docker/docker-compose-couch.yaml
 # certificate authorities compose file
 COMPOSE_FILE_CA=docker/docker-compose-ca.yaml
+# this is the default chaincode language
+CC_SRC_LANGUAGE="golang"
 
 ## Parse mode
 if [[ $# -lt 1 ]] ; then
@@ -198,6 +200,10 @@ while [[ $# -ge 1 ]] ; do
             CC_SRC_PATH="$2"
             shift
         ;;
+        -ccl )
+            CC_SRC_LANGUAGE="$2"
+            shift
+        ;;
         * )
             errorln "Unknown flag: $key"
             printHelp
@@ -219,7 +225,7 @@ if [ "${MODE}" == "up" ]; then
         scripts/testChaincode_rawOne.sh $CHANNEL_NAME $CC_NAME
     fi
     if [ $CC_NAME == "contract_rawTwo" ]; then
-        scripts/testChaincode_rawOne.sh $CHANNEL_NAME $CC_NAME
+        scripts/testChaincode_rawTwo.sh $CHANNEL_NAME $CC_NAME
     fi
 else
     printHelp
