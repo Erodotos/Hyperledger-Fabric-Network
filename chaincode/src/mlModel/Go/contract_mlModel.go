@@ -22,6 +22,8 @@ type SmartContract struct {
 // Main
 // =========
 func main() {
+
+	//CHAINCODE ENABLER
 	/*
 		err := shim.Start(new(SmartContract))
 		if err != nil {
@@ -29,30 +31,77 @@ func main() {
 		}
 	*/
 
-	/*
-		ISSUE #1: Must find how to properly export a trained model; using checkpoints is only for getting familiar
-					with the APIs
+	//DEMO: 2 dense layers; no LSTM layers
 
-		ISSUE #2: Must transfer the model on the chaincode's container when loading it for the first time.
-				After the first load, the model's files should be stored on the blockchain; don't yet know how.
-	*/
-	IMPORT_DIR := "./saved_model"
+	IMPORT_DIR := "./saved_model_demo"
 	sess_options := &tf.SessionOptions{}
 
 	model, err := tf.LoadSavedModel(IMPORT_DIR, []string{"TRAINING"}, sess_options)
 	if err != nil {
 		panic(err.Error())
 	}
+	defer model.Session.Close()
+
 	fmt.Println("-----------------")
 	fmt.Println(model.Session)
 	fmt.Println("-----------------")
 	fmt.Println(model.Graph)
 	fmt.Println("-----------------")
+
 	ops := model.Graph.Operations()
 	for _, op := range ops {
-		fmt.Println(op.Name())
+		fmt.Println(op.Type() + "\t\t" + op.Name())
 	}
 	fmt.Println("-----------------")
+
+	tensor, _ := tf.NewTensor([1][1][1]float32{{{float32(5.2980e+03)}}}) //declare the input's shape; [batch size = # of examples][y dimension of example's feature vector][ x dimension of example's feature vector = # of layer units]
+
+	result, err := model.Session.Run(
+		map[tf.Output]*tf.Tensor{
+			model.Graph.Operation("sequential/dense_0/Sigmoid").Output(0): tensor, // Call the function that will run the 1st hidden layer to produce the inputs for the 2nd layer
+		},
+		[]tf.Output{
+			model.Graph.Operation("sequential/dense_1/BiasAdd").Output(0), // Call the function of the 2nd layer that will produce its own results
+		},
+		nil,
+	)
+
+	if err != nil {
+		fmt.Printf("Error running the session with input, err: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf("Result value: %v \n", result[0].Value())
+
+	//LSTM model: 1x10 hidden/lstm layers, 1x1 dense layers ------------- PENDING
+	/*
+		IMPORT_DIR := "./saved_model"
+		sess_options := &tf.SessionOptions{}
+
+		model, err := tf.LoadSavedModel(IMPORT_DIR, []string{"TRAINING"}, sess_options)
+		if err != nil {
+			panic(err.Error())
+		}
+		defer model.Session.Close()
+
+		fmt.Println("-----------------")
+		fmt.Println(model.Session)
+		fmt.Println("-----------------")
+		fmt.Println(model.Graph)
+		fmt.Println("-----------------")
+
+		ops := model.Graph.Operations()
+		for _, op := range ops {
+			fmt.Println(op.Type() + "\t\t" + op.Name())
+		}
+		fmt.Println("-----------------")
+	*/
+	/*
+		ISSUE:
+			LSTM cells use 3 sigmoid and 2 tanh functions;
+			must further study the order of execution and then proceed to call them in order
+	*/
+
 }
 
 // ===========================
