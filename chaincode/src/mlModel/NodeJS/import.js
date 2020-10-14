@@ -1,13 +1,30 @@
-import * as tf from '@tensorflow/tfjs';
+const tf = require('@tensorflow/tfjs-node');
 
-//To use the 'import' statement with Node.js:
-//  npm install @tensorflow/tfjs
-//  npm install --save esm
-//  node -r esm filename.js  (run)
+//  nodejs v14.13.1
+//  nvm v0.36.0
+//  npm v6.14.8
+
+//  npm install @tensorflow/tfjs-node
+//  npm rebuild @tensorflow/tfjs-node --build-from-source
+//  node import.js
 
 
 function handleSuccess(value){
-    return console.log(value.toJSON().toString());
+    console.log(value);
+
+    /*
+    (async () => {
+        const ed = await tf.io.encodeWeights(value);
+    
+        return ed;
+    })(value).then(handleSuccess2,handleFailure);
+    */
+
+    return value;
+}
+
+function handleSuccess2(value){
+    return console.log(value);
 }
 
 function handleFailure(reason){
@@ -15,16 +32,16 @@ function handleFailure(reason){
 }
 
 
-//loadLayersModel supports only HTTP(S) proto
-//(It also needs the input/batch shape attribute of the first hidden layer to be declared; not figured out dynamically.)
-//Used a dummy site of mine to get the models with http;
-//might be efficient to have a server.js initiated on a machine to return the model files to the node.js script
-const HTTP_MODEL_PATH = 'https://skoumo01.github.io/json_files/saved_model/model.json'; 
+
+const MODEL_PATH = 'file://./saved_model/model.json';
 
 
-const model = (async () => {
-    return await tf.loadLayersModel(HTTP_MODEL_PATH); 
+var model = (async () => {
+    const m =  await tf.loadLayersModel(MODEL_PATH); 
+
+    return m;
 })().then(handleSuccess,handleFailure);
+
 
 
 
