@@ -4,27 +4,36 @@ const { Contract } = require('fabric-contract-api');
 
 class contract_mlModel extends Contract {
 
-    async InitLedger(ctx) {
-        
+    async Init(ctx) {
+
     }
 
-    // CreateAsset issues a new asset to the world state with given details.
-    async writeModel(ctx, id, location, model) {
+    async writeModel(ctx, id, model_json, model_weights) {
+
         const Telco_Model = {
             ID: id,
-            Location: location,
-            Model: model,
+            Model_Json: model_json,
+            Model_Weights: model_weights,
         };
+
         return ctx.stub.putState(id, Buffer.from(JSON.stringify(Telco_Model)));
+
     }
 
     // ReadAsset returns the asset stored in the world state with given id.
     async queryModel(ctx, id) {
-        const assetJSON = await ctx.stub.getState(id); // get the asset from chaincode state
-        if (!assetJSON || assetJSON.length === 0) {
-            throw new Error(`The asset ${id} does not exist`);
+
+        const Telco_Model = await ctx.stub.getState(id);
+        if (!Telco_Model || Telco_Model.length === 0) {
+            throw new Error(`The Model ${id} does not exist`);
         }
-        return assetJSON.toString();
+
+        var record = JSON.parse(Telco_Model)
+    
+        var model_buffer = new Buffer(record.Model_Json, 'base64');
+        var weights_buffer = new Buffer(record.Model_Weights, 'base64');
+
+        return model_buffer.toString();
     }
 
 }

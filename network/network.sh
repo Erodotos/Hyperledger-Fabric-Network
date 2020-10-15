@@ -227,6 +227,9 @@ if [ "${MODE}" == "up" ]; then
     if [ $CC_NAME == "contract_rawTwo" ]; then
         scripts/testChaincode_rawTwo.sh $CHANNEL_NAME $CC_NAME
     fi
+    if [ $CC_NAME == "contract_mlModel" ]; then
+        scripts/testChaincode_mlModel.sh $CHANNEL_NAME $CC_NAME
+    fi
 else
     printHelp
     exit 1
