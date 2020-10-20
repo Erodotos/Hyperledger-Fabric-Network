@@ -1,0 +1,25 @@
+test:
+  name: simple test
+  description: This is an example benchmark using caliper
+  workers:
+    type: local
+    number: 1
+  rounds:
+    - label: write
+      txDuration: 30
+      rateControl:
+        type: fixed-load
+        opts:
+          transactionLoad: 2
+      # txNumber: 200
+      # rateControl:
+      #   type: fixed-rate
+      #   opts:
+      #     tps: 50
+      workload: 
+        module: workload/newRecord.js
+# monitor:
+#   interval: 1
+#   type: ['docker']
+#   docker:
+#     containers: ['all']

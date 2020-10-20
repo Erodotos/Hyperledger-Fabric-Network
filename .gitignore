@@ -1,4 +1,5 @@
 *.DS_Store
+.vscode
 organizations/
 chaincode/src/influxdb/vendor/*
 chaincode/src/rawOne/vendor/*
@@ -20,3 +21,7 @@ api/wallet/*
 contract_influx_chaincode.tar.gz
 contract_rawTwo.tar.gz
 contract_rawOne.tar.gz
+caliper-workspace/report.html
+caliper-workspace/node_modules
+caliper-workspace/caliper.log
+caliper-workspace/package-lock.json
