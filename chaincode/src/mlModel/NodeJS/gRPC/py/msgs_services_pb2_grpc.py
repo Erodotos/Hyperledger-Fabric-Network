@@ -18,7 +18,7 @@ class GreeterStub(object):
             channel: A grpc.Channel.
         """
         self.SayHello = channel.unary_unary(
-                '/mlModel.modejs.gRPC.Greeter/SayHello',
+                '/Greeter/SayHello',
                 request_serializer=msgs__services__pb2.HelloRequest.SerializeToString,
                 response_deserializer=msgs__services__pb2.HelloReply.FromString,
                 )
@@ -34,8 +34,8 @@ class GreeterServicer(object):
         """Sends a greeting
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details('Method not implemented! --------------HERE1')
+        raise NotImplementedError('Method not implemented! --------------HERE2')
 
 
 def add_GreeterServicer_to_server(servicer, server):
@@ -47,7 +47,7 @@ def add_GreeterServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'mlModel.modejs.gRPC.Greeter', rpc_method_handlers)
+            'Greeter', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
@@ -69,7 +69,7 @@ class Greeter(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mlModel.modejs.gRPC.Greeter/SayHello',
+        return grpc.experimental.unary_unary(request, target, '/Greeter/SayHello',
             msgs__services__pb2.HelloRequest.SerializeToString,
             msgs__services__pb2.HelloReply.FromString,
             options, channel_credentials,

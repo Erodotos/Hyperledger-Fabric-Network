@@ -1,5 +1,6 @@
 syntax = "proto3";
-package mlModel.modejs.gRPC;
+
+//python -m grpc_tools.protoc   -I.. --python_out=. --grpc_python_out=.   ../msgs_services.proto   (for generating the python files)
 
 //autogeneration options have not been added yet
 
