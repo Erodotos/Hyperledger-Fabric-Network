@@ -2,10 +2,22 @@
 
 const { Contract } = require('fabric-contract-api');
 
+
+const grpc = require('grpc')/////////////////////
+
+
 class contract_mlModel extends Contract {
 
     async Init(ctx) {
-
+        const proto = grpc.load({file: 'msgs_services.proto', root: `../gRPC`})
+        const client = new proto.Greeter('localhost:9999', grpc.credentials.createInsecure())
+        
+        client.SayHello({name: 'World'}, function(err, msg){
+            if(err) {
+              console.error(err)
+            }
+            console.log(msg)
+          })
     }
 
     async writeModel(ctx, id, model_json, model_weights) {

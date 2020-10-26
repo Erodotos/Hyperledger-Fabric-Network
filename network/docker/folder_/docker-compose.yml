@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+
+  grpc_server:
+    container_name: grpc_server_demo
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+      

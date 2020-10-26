@@ -4,6 +4,8 @@ networks:
   test:
 
 services:
+
+      
   couchdb0:
     container_name: couchdb0
     image: hyperledger/fabric-couchdb:$IMAGE_TAG
