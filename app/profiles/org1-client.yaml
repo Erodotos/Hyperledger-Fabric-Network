@@ -1,0 +1,21 @@
+# Sample YAML for client config
+name: "Test Client"
+version: "1.0"
+description: "Client for Org1"
+
+# Client section describes the client
+client:
+  # Org name
+  organization: Org1
+  # User context storage
+  credentialStore:
+    # State
+    path: "./credstore/org1/hfc-kvs"
+    # Public & Private key
+    cryptoStore:
+      path: "./credstore/org1/hfc-cvs"
+
+  #GRPC options
+  connection:
+    options:
+      grpc.keepalive_time_ms: 120000

@@ -1,5 +1,5 @@
 {
-  "name": "caliper-workspace",
+  "name": "app",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,10 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@hyperledger/caliper-cli": "^0.4.0",
-    "fabric-ca-client": "^2.1.0",
-    "fabric-common": "^2.1.0",
-    "fabric-network": "^2.1.0",
-    "fabric-protos": "^2.1.0"
+    "fabric-client": "^1.4.0",
+    "fabric-network": "^1.4.0",
+    "fs": "0.0.1-security",
+    "path": "^0.12.7"
   }
 }
