@@ -4,6 +4,21 @@ networks:
   test:
 
 services:
+
+  grpc_server:
+    container_name: grpc_server
+    image: python:latest
+    ports: 
+      - "9999:9999"
+    command: bash -c "python -m pip install --upgrade pip && python -m pip install grpcio && python -m pip install grpcio-tools && python /root/grpc_server/py/server.py "
+    volumes:
+      - ../../chaincode/src/mlModel/NodeJS/gRPC:/root/grpc_server
+    networks: 
+      - test
+
+      
+
+
   couchdb0:
     container_name: couchdb0
     image: hyperledger/fabric-couchdb:$IMAGE_TAG

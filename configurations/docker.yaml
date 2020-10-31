@@ -303,3 +303,11 @@ services:
     networks:
       - test
 
+  grpc_server:
+    container_name: grpc_server_dummy
+    image: python:latest
+    ports:
+      - '9999:9999'
+    networks:
+      - test
+
