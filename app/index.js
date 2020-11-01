@@ -2,6 +2,22 @@
 'use strict';
 const fs = require('fs');
 const Client = require('fabric-client');
+var grpc = require('grpc');
+var protoLoader = require('@grpc/proto-loader');
+
+//gRPC: loading the proto file decriptors
+const PROTO_FILE = 'gRPC/network_test.proto';
+const packageDefinition = protoLoader.loadSync(
+    PROTO_FILE,
+    {keepCase: true,
+     longs: String,
+     enums: String,
+     defaults: true,
+     oneofs: true
+    });
+const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
+const grpc_client = new protoDescriptor.Server('0.0.0.0:9999', grpc.credentials.createInsecure())
+
 
 // Constants for profile
 const CONNECTION_PROFILE_PATH = './profiles/dev-connect.yaml'
@@ -43,10 +59,85 @@ async function invokeChaincode() {
     var tx_id = client.newTransactionID();
     let tx_id_string = tx_id.getTransactionID();
 
+
+
+    
+    grpc_client.GetTransactionData({name: 'none'}, function(err, tx){
+        if(err) {
+            console.error(err)
+        }else{
+            var timestamp = base_timestamp++
+            var timestamp_string = timestamp.toString()
+
+            var request = {
+                targets: peerName,
+                chaincodeId: CHAINCODE_ID,
+                fcn: 'write',
+                args: [tx.meas_info, tx.counter, tx.cell_name, tx.value, timestamp_string],
+                chainId: CHANNEL_NAME,
+                txId: tx_id
+            };
+            console.log(request)
+            
+            console.log("#1 channel.sendTransactionProposal     Done.")
+
+            async function submit(){
+                let results = await channel.sendTransactionProposal(request);
+                
+                // Array of proposal responses
+                var proposalResponses = results[0];
+
+                var proposal = results[1];
+
+                var all_good = true;
+                for (var i in proposalResponses) {
+                    let good = false
+                    if (proposalResponses && proposalResponses[i].response &&
+                        proposalResponses[i].response.status === 200) {
+                        good = true;
+                        console.log(`\tinvoke chaincode EP response #${i} was good`);
+                    } else {
+                        console.log(`\tinvoke chaincode EP response #${i} was bad!!!`);
+                    }
+                    all_good = all_good & good
+                }
+                console.log("#2 Looped through the EP results  all_good=", all_good)
+
+                await setupTxListener(tx_id_string)
+                console.log('#3 Registered the Tx Listener')
+
+                setTimeout(function () {
+                    console.log(i);
+                }, Math.floor(Math.random() * 1000));
+
+                var orderer_request = {
+                    txId: tx_id,
+                    proposalResponses: proposalResponses,
+                    proposal: proposal
+                };
+
+                await channel.sendTransaction(orderer_request);
+                console.log("#4 channel.sendTransaction - waiting for Tx Event")
+
+              }
+              submit().then(()=>{}).catch((err)=>{console.log(err)});
+
+            
+
+            
+        }
+      })
+      
+
     var meas_info = (Math.floor(10000000 + Math.random() * 90000000)).toString()
     var counter = (Math.floor(10000000 + Math.random() * 90000000)).toString()
     var cell_name = "8424bf520db261335d52a0b827a78538"
     var value = (Math.floor(Math.random() * 100)).toString()
+    
+    
+    
+    
+    /*
     var timestamp = base_timestamp++
     var timestamp_string = timestamp.toString()
 
@@ -96,6 +187,7 @@ async function invokeChaincode() {
 
     await channel.sendTransaction(orderer_request);
     console.log("#4 channel.sendTransaction - waiting for Tx Event")
+    */
 }
 
 
@@ -118,7 +210,7 @@ function setupTxListener(tx_id_string) {
         (err) => {
             console.log(err);
         },
-        { unregister: true, disconnect: false }
+        { unregister: true, disconnect: true }
     );
 
     event_hub.connect();

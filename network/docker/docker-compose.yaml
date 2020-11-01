@@ -12,6 +12,18 @@ networks:
 
 services:
 
+  grpc_server:
+    container_name: grpc_server
+    image: python:latest
+    ports: 
+      - "9999:9999"
+    command: bash -c "python -m pip install --upgrade pip && python -m pip install grpcio && python -m pip install grpcio-tools && python /root/grpc_server/py/server.py "
+    volumes:
+      - ../../app/gRPC:/root/grpc_server
+    networks: 
+      - test
+
+
   orderer.example.com:
     container_name: orderer.example.com
     image: hyperledger/fabric-orderer:$IMAGE_TAG

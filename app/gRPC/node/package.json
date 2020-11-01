@@ -1,0 +1,15 @@
+{
+  "name": "network_test",
+  "version": "1.0.0",
+  "description": "gRPC implementation for testing",
+  "main": "network_test.js",
+  "dependencies": {
+    "@grpc/proto-loader": "0.5.5",
+    "grpc": "1.24.3"
+  },
+  "scripts": {
+    "test": "node network_test.js"
+  },
+  "author": "skoumo01@cs.ucy.ac.cy",
+  "license": "ISC"
+}
