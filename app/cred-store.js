@@ -12,23 +12,16 @@ const CONNECTION_PROFILE_PATH = './profiles/dev-connect.yaml'
 const CLIENT_CONNECTION_PROFILE_PATH = './profiles/org1-client.yaml'
 
 
-// const CRYPTO_CONFIG_PEER_ORGANIZATIONS = '../network/peerOrganizations'
-
 const CRYPTO_CONFIG = path.resolve(__dirname, '../network/organizations');
 const CRYPTO_CONFIG_PEER_ORGANIZATIONS = path.join(CRYPTO_CONFIG, 'peerOrganizations')
 
 const client = Client.loadFromConfig(CONNECTION_PROFILE_PATH)
 
-// Below 2 lines are equivalent to the above line
-// const client=new Client()
-// client.loadFromConfig(CONNECTION_PROFILE_PATH)
-
-
 main()
 
 // Main function
 async function main() {
-    // Check if org and name are provided
+    // Input data sanity check
     if (process.argv.length < 4) {
         console.log("Usage:  node   cred-store.js   org    user-name")
         process.exit(1)
@@ -67,11 +60,6 @@ async function main() {
     // At this point client can be used for sending requests to Peer | Orderer
 }
 
-
-
-/**
- * Initialize the file system credentials store
- */
 async function initCredentialStore() {
 
     // Call the function for initializing the credentials store on file system
@@ -81,9 +69,6 @@ async function initCredentialStore() {
         })
 }
 
-/**
- * Setup the user context
- **/
 async function createUserContext(org, user) {
     // Get the path  to user private key
     let privateKeyPath = getPrivateKeyPath(org, user)
@@ -100,7 +85,6 @@ async function createUserContext(org, user) {
             privateKey: privateKeyPath,
             signedCert: certPath
         },
-        // Set this to true to skip persistence
         skipPersistence: false
     }
 
@@ -110,28 +94,14 @@ async function createUserContext(org, user) {
     return userContext
 }
 
-/**
- * Reads content of the certificate
- * @param {string} org 
- * @param {string} user 
- */
 function getCertPath(org, user) {
-    //budget.com/users/Admin@budget.com/msp/signcerts/Admin@budget.com-cert.pem"
     var certPath = CRYPTO_CONFIG_PEER_ORGANIZATIONS + "/" + org + ".example.com/users/" + user + "@" + org + ".example.com/msp/signcerts/" + user + "@" + org + ".example.com-cert.pem"
     return certPath
 }
 
-/**
- * Reads the content of users private key
- * @param {string} org 
- * @param {string} user 
- */
 function getPrivateKeyPath(org, user) {
-    // ../crypto/crypto-config/peerOrganizations/budget.com/users/Admin@budget.com/msp/keystore/05beac9849f610ad5cc8997e5f45343ca918de78398988def3f288b60d8ee27c_sk
     var pkFolder = CRYPTO_CONFIG_PEER_ORGANIZATIONS + "/" + org + ".example.com/users/" + user + "@" + org + ".example.com/msp/keystore"
     fs.readdirSync(pkFolder).forEach(file => {
-        // console.log(file);
-        // return the first file
         pkfile = file
         return
     })
@@ -139,10 +109,6 @@ function getPrivateKeyPath(org, user) {
     return (pkFolder + "/" + pkfile)
 }
 
-/**
- * Creates the MSP ID from the org name for 'acme' it will be 'AcmeMSP'
- * @param {string} org 
- */
 function createMSPId(org) {
     return org.charAt(0).toUpperCase() + org.slice(1) + 'MSP'
 }
