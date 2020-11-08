@@ -1,4 +1,4 @@
-var PROTO_PATH = '../network_test.proto';
+var PROTO_PATH = '../federated.proto';
 var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
 var packageDefinition = protoLoader.loadSync(
@@ -25,7 +25,7 @@ async function submitTransaction() {
             contractId: 'contract_rawOne',
             contractFunction: 'write',
             invokerIdentity: 'Admin@org1.example.com',
-            contractArguments: [tx.meas_info, tx.counter, tx.cell_name, tx.value, timestamp],
+            contractArguments: [tx.round, tx.server_state, tx.sampled_train_data, tx.clients_participated, timestamp],
             readOnly: false
       };
       async function submit(){

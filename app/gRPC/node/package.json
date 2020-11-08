@@ -1,5 +1,5 @@
 {
-  "name": "network_test",
+  "name": "federated",
   "version": "1.0.0",
   "description": "gRPC implementation for testing",
   "main": "network_test.js",
