@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import network_test_pb2 as network__test__pb2
+import federated_pb2 as federated__pb2
 
 
 class ServerStub(object):
@@ -18,8 +18,8 @@ class ServerStub(object):
         """
         self.GetTransactionData = channel.unary_unary(
                 '/Server/GetTransactionData',
-                request_serializer=network__test__pb2.TransactionRequest.SerializeToString,
-                response_deserializer=network__test__pb2.TransactionReply.FromString,
+                request_serializer=federated__pb2.TransactionRequest.SerializeToString,
+                response_deserializer=federated__pb2.TransactionReply.FromString,
                 )
 
 
@@ -39,8 +39,8 @@ def add_ServerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetTransactionData': grpc.unary_unary_rpc_method_handler(
                     servicer.GetTransactionData,
-                    request_deserializer=network__test__pb2.TransactionRequest.FromString,
-                    response_serializer=network__test__pb2.TransactionReply.SerializeToString,
+                    request_deserializer=federated__pb2.TransactionRequest.FromString,
+                    response_serializer=federated__pb2.TransactionReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -66,7 +66,7 @@ class Server(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Server/GetTransactionData',
-            network__test__pb2.TransactionRequest.SerializeToString,
-            network__test__pb2.TransactionReply.FromString,
+            federated__pb2.TransactionRequest.SerializeToString,
+            federated__pb2.TransactionReply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

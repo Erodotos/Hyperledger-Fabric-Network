@@ -6,7 +6,7 @@ var grpc = require('grpc');
 var protoLoader = require('@grpc/proto-loader');
 
 //gRPC: loading the proto file decriptors
-const PROTO_FILE = 'gRPC/network_test.proto';
+const PROTO_FILE = 'gRPC/federated.proto';
 const packageDefinition = protoLoader.loadSync(
     PROTO_FILE,
     {keepCase: true,
@@ -60,7 +60,7 @@ async function invokeChaincode() {
     let tx_id_string = tx_id.getTransactionID();
 
 
-
+/*
     
     grpc_client.GetTransactionData({name: 'none'}, function(err, tx){
         if(err) {
@@ -127,7 +127,7 @@ async function invokeChaincode() {
             
         }
       })
-      
+   */   
 
     var meas_info = (Math.floor(10000000 + Math.random() * 90000000)).toString()
     var counter = (Math.floor(10000000 + Math.random() * 90000000)).toString()
@@ -137,7 +137,7 @@ async function invokeChaincode() {
     
     
     
-    /*
+    
     var timestamp = base_timestamp++
     var timestamp_string = timestamp.toString()
 
@@ -187,7 +187,7 @@ async function invokeChaincode() {
 
     await channel.sendTransaction(orderer_request);
     console.log("#4 channel.sendTransaction - waiting for Tx Event")
-    */
+    
 }
 
 
