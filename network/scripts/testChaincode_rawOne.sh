@@ -64,6 +64,6 @@ getRecordHistory(){
 }
 
 # write
-queryRecords
+# queryRecords
 # queryRecordsWithPagination
 # getRecordHistory

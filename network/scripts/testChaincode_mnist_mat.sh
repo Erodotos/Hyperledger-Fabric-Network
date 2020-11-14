@@ -18,7 +18,7 @@ write() {
     -n ${CC_NAME}  \
     --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
     --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "writeRoundData","Args": ["id_2", "timestamp", "round", "server_state", "sampled_train_data", "clients_participated", "broadcasted_bits", "aggregated_bits"]}'
+    -c '{"function": "writeRoundData","Args": ["id_1", "timestamp", "round", "server_state", "sampled_train_data", "clients_participated", "broadcasted_bits", "aggregated_bits"]}'
     
 }
 
@@ -32,9 +32,9 @@ query(){
     -n ${CC_NAME}  \
     --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
     --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "queryRoundData","Args": ["id_4"]}'
+    -c '{"function": "queryRoundData","Args": ["id_11"]}'
 }
 
 
 # write
-# query
+ query

@@ -3,7 +3,7 @@
 const { Contract } = require('fabric-contract-api');
 
 
-class contract_mnist extends Contract {
+class contract_mnist_mat extends Contract {
 
     async Init(ctx) {
         
@@ -40,4 +40,4 @@ class contract_mnist extends Contract {
 
 }
 
-module.exports = contract_mnist;
+module.exports = contract_mnist_mat;

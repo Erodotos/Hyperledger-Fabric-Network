@@ -230,8 +230,11 @@ if [ "${MODE}" == "up" ]; then
     if [ $CC_NAME == "contract_mlModel" ]; then
         scripts/testChaincode_mlModel.sh $CHANNEL_NAME $CC_NAME
     fi
-    if [ $CC_NAME == "contract_mnist" ]; then
-        scripts/testChaincode_mnist.sh $CHANNEL_NAME $CC_NAME
+    if [ $CC_NAME == "contract_mnist_mat" ]; then
+        scripts/testChaincode_mnist_mat.sh $CHANNEL_NAME $CC_NAME
+    fi
+    if [ $CC_NAME == "contract_mnist_rat" ]; then
+        scripts/testChaincode_mnist_rat.sh $CHANNEL_NAME $CC_NAME
     fi
 else
     printHelp
