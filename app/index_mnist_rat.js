@@ -1,4 +1,3 @@
-
 'use strict';
 const fs = require('fs');
 const Client = require('fabric-client');
@@ -15,16 +14,15 @@ const PEER_NAME = 'peer0.org1.example.com'
 const PEER_2_NAME = 'peer0.org1.example.com'
 const CHANNEL_NAME = 'mychannel'
 const CHAINCODE_ID = 'contract_mnist_rat'
-const IMAGE_FILE = '../chaincode/src/mnist/RAT/data/28x28_grayscale_base64'
+const IMAGE_FILE = './mnist_image_example/28x28_grayscale_base64'
 
-
-//timestamp 
-var base_timestamp = 201601251930
 
 // Variable to hold the client
 var client = {}
 // Variable to hold the channel
 var channel = {}
+
+
 
 main()
 
@@ -34,13 +32,43 @@ async function main() {
 
     channel = await setupChannel()
 
-    ingestImage()
-    //queryImage('b8f9e0c3931ac6d7adced0f80b805a679e2460651f5c9cfc3fd5693666ca0ad6')
+    let id = 'imid0';
+    //ingestImage(id);
 
+
+    var iter_num = 1000000;
+    console.log('\ntx num: %s', iter_num)
+
+    var exec_min_ms = 1000000;
+    var exec_max_ms = -1;
+    var exec_total_ms = 0;
+
+    var start = new Date().getTime();
+
+    let i;
+    for (i=1;i<=iter_num;i++){
+        let time_ms = await queryImage(id);
+        exec_total_ms += time_ms;
+        if (exec_min_ms>time_ms){
+            exec_min_ms = time_ms;
+        }
+        if (exec_max_ms<time_ms){
+            exec_max_ms = time_ms;
+        }
+        if (i==iter_num){
+            console.log('\n(last tx) exec ms: %s', time_ms)
+        }
+    }
+    var response_time_ms = new Date().getTime() - start;
+
+    console.log('\nmin ms: %s\nmax: %s\navg ms: %s\ntotal ms: %s\nresponse ms: %s\n',
+            exec_min_ms,exec_max_ms,exec_total_ms/iter_num,exec_total_ms, response_time_ms);
+
+    console.log('----------------------------------');
 }
 
 
-async function ingestImage() {
+async function ingestImage(id) {
 
     let t = new Date().getTime() 
     let peerName = channel.getChannelPeer(PEER_NAME)
@@ -58,7 +86,7 @@ async function ingestImage() {
                 targets: peerName,
                 chaincodeId: CHAINCODE_ID,
                 fcn: 'writeImage',
-                args: ['imid1', image_base64],
+                args: [id, image_base64],
                 chainId: CHANNEL_NAME,
                 txId: tx_id
         };
@@ -115,27 +143,37 @@ async function ingestImage() {
 }
 
 
-function queryImage(tx_id) {
-    let t = new Date().getTime()
+function queryImage(id) {
+
     let peerName = channel.getChannelPeer(PEER_NAME)
 
     async function submit() {
-
-        let results = await channel.queryTransaction(tx_id, peerName, true, false)
-
-        let args = await results.transactionEnvelope.payload.data.actions[0].payload.chaincode_proposal_payload.input.chaincode_spec.input.args
-
-        let result = {
-            image_id: args[1].toString(),
-            image_base64: args[2].toString(),
-            arrived: t,
-            completed: new Date().getTime()
-        };
         
+
+       let request = {
+            targets: peerName,
+            chaincodeId: 'contract_mnist_rat',
+            fcn: 'queryImage',
+            args: [id]
+        };
+
+
+        // send the query proposal to the peer
+        let t = new Date().getTime();
+        let response = await channel.queryByChaincode(request);
+        let t2 = new Date().getTime();
+
+        let result = JSON.parse(response);
+        result.time_interval = t2 - t;
+
+        //console.log(result);
+
        return result
     }
 
-    submit().then((result)=>{console.log(result); console.log('\nquery_time_ms: %s', (result.completed-result.arrived))}).catch((err)=>{console.log(err)});
+    return submit().then((result)=>{//console.log(result);
+                            return result.time_interval;
+                            }).catch((err)=>{console.log(err); return -1});
 }
 
 

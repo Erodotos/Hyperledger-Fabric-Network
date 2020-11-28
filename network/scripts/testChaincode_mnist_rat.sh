@@ -38,7 +38,7 @@ query(){
 image=$(<../chaincode/src/mnist/RAT/data/28x28_grayscale_base64)
 
 
-# write
- query
+ write
+# query
 
 

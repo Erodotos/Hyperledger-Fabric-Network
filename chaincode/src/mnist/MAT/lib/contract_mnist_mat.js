@@ -12,13 +12,13 @@ class contract_mnist_mat extends Contract {
     async writeRoundData(ctx, id, timestamp, round, server_state, sampled_train_data, clients_participated, broadcasted_bits, aggregated_bits) {
 
         const Mnist_Round_Data = {
-            Timestamp: timestamp,
-            Round: round,
-            Server_State: server_state,
-            Sampled_Train_Data: sampled_train_data,
-            Clients_Participated: clients_participated,
-            Broadcasted_Bits: broadcasted_bits,
-            Aggregated_Bits: aggregated_bits,
+            timestamp: timestamp,
+            round: round,
+            server_state: server_state,
+            sampled_train_data: sampled_train_data,
+            clients_participated: clients_participated,
+            broadcasted_bits: broadcasted_bits,
+            aggregated_bits: aggregated_bits,
         };
 
         return ctx.stub.putState(id, Buffer.from(JSON.stringify(Mnist_Round_Data)));

@@ -56,7 +56,7 @@ let child;
 // }
 
 console.log("\n\n\tSend Rate = 200");
-var transactionNumber = 50;
+var transactionNumber = 50; //1/4
 
 for (var org of organizations) {
     for (var peer of peers) {
