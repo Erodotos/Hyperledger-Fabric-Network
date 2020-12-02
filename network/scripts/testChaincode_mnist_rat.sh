@@ -35,8 +35,6 @@ query(){
     -c '{"function": "queryImage","Args": ["imid0"]}'
 }
 
-image=$(<../chaincode/src/mnist/RAT/data/28x28_grayscale_base64)
-
 
  write
 # query

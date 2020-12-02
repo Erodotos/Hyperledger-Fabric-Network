@@ -85,8 +85,8 @@ async function queryImage(id) {
          var sum = total_time.reduce((acc, c) => acc + c, 0);
          var average = sum / NUMBER_OF_TXS;
 
-         console.log("\t\tAverage Retrieval Latency =  %d ms", average);
-         console.log("\t\tQueried Txs = ", numTxs);
+         //console.log("\t\tAverage Retrieval Latency =  %d ms", average);
+         //console.log("\t\tQueried Txs = ", numTxs);
          exit(0);
      }
 

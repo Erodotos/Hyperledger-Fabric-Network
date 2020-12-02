@@ -32,9 +32,9 @@ query(){
     -n ${CC_NAME}  \
     --peerAddresses localhost:7051 --tlsRootCertFiles $PEER0_ORG1_CA \
     --peerAddresses localhost:9051 --tlsRootCertFiles $PEER0_ORG2_CA \
-    -c '{"function": "queryRoundData","Args": ["modelid"]}'
+    -c '{"function": "queryRoundData","Args": ["id_1"]}'
 }
 
 
- write
-# query
+# write
+ query
