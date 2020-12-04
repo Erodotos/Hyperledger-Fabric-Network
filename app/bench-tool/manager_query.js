@@ -14,7 +14,7 @@ if (!totaltransactionNumber){
     exit(0);
 }
 
-
+var peerNumber = 4;
 var channel = 'mychannel';
 var organizations;
 var users;
@@ -24,7 +24,7 @@ if (multipeer === 'true'){
     organizations = ['org1', 'org2'];
     users = ['Admin'];
     peers = ['0', '1'];
-    transactionNumber = totaltransactionNumber/4;
+    transactionNumber = totaltransactionNumber/peerNumber;
 }else if(multipeer === 'false'){
     organizations = ['org1'];
     users = ['Admin'];
@@ -49,8 +49,10 @@ if (approach === 'RAT') {
 let peerName;
 let child;
 
-console.log("\n\n\tQuery Request Rate = ", totaltransactionNumber);
+console.log("\n\tTotal Transaction Number:\t\t", totaltransactionNumber);
 
+var sum_of_peer_execution_time = 0;
+var iteration_count = 0;
 for (var org of organizations) {
     for (var peer of peers) {
         peerName = 'peer' + peer + '.' + org + '.' + 'example.com';
@@ -58,8 +60,18 @@ for (var org of organizations) {
             if (error) {
                 throw error;
             }
-            console.log(stdout);
+            
+            let temp = stdout.toString().split(' ');
+            sum_of_peer_execution_time += parseFloat((temp[2]+temp[3]).replace(",", "."));
+            iteration_count++;
+            if (iteration_count===peerNumber){
+                let execution_time = sum_of_peer_execution_time/peerNumber;
+                let throughput = totaltransactionNumber/execution_time;
+                console.log('\tTotal Execution Time (seconds):\t\t', execution_time);
+                console.log('\tThroughput (transactions/seconds):\t', throughput,'\n');
+            }
         });
     }
 }
+
 
