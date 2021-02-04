@@ -36,5 +36,5 @@ query(){
 }
 
 
-# write
- query
+ write
+# query
