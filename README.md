@@ -1,3 +1,5 @@
+# NOTE: THIS REPOSITORY IS NO LONGER MAINTAINED HERE. IT IS NOW MANAGED BY [Data Management Systems Laboratory (DMSL), CS, UCY](https://github.com/dmsl). HOWEVER, AT THE MOMENT IT IS OFFLINE SINCE THERE IS ONGOING WORK, BUT IT WILL BE AVAILABLE SOON.
+
 # Hyperledger Fabric Test Network
 
 In this repository you can find instructions on how to build a simple Hyperledger Fabric Network. The network consists of 2 Organizations. Each Organization has 2 peers. The following image illustrates the network formation. 
